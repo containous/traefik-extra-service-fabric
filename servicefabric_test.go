@@ -9,22 +9,19 @@ import (
 
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
-	sfsdk "github.com/jjcollinge/servicefabric"
+	sf "github.com/jjcollinge/servicefabric"
 )
 
 func TestUpdateConfig(t *testing.T) {
-	apps := &sfsdk.ApplicationItemsPage{
+	apps := &sf.ApplicationItemsPage{
 		ContinuationToken: nil,
-		Items: []sfsdk.ApplicationItem{
+		Items: []sf.ApplicationItem{
 			{
 				HealthState: "Ok",
 				ID:          "TestApplication",
 				Name:        "fabric:/TestApplication",
-				Parameters: []*struct {
-					Key   string `json:"Key"`
-					Value string `json:"Value"`
-				}{
-					{"TraefikPublish", "fabric:/TestApplication/TestService"},
+				Parameters: []*sf.AppParameter{
+					{Key: "TraefikPublish", Value: "fabric:/TestApplication/TestService"},
 				},
 				Status:      "Ready",
 				TypeName:    "TestApplicationType",
@@ -32,9 +29,9 @@ func TestUpdateConfig(t *testing.T) {
 			},
 		},
 	}
-	services := &sfsdk.ServiceItemsPage{
+	services := &sf.ServiceItemsPage{
 		ContinuationToken: nil,
-		Items: []sfsdk.ServiceItem{
+		Items: []sf.ServiceItem{
 			{
 				HasPersistedState: true,
 				HealthState:       "Ok",
@@ -48,25 +45,17 @@ func TestUpdateConfig(t *testing.T) {
 			},
 		},
 	}
-	partitions := &sfsdk.PartitionItemsPage{
+	partitions := &sf.PartitionItemsPage{
 		ContinuationToken: nil,
-		Items: []sfsdk.PartitionItem{
+		Items: []sf.PartitionItem{
 			{
-				CurrentConfigurationEpoch: struct {
-					ConfigurationVersion string `json:"ConfigurationVersion"`
-					DataLossVersion      string `json:"DataLossVersion"`
-				}{
+				CurrentConfigurationEpoch: sf.ConfigurationEpoch{
 					ConfigurationVersion: "12884901891",
 					DataLossVersion:      "131496928071680379",
 				},
 				HealthState:       "Ok",
 				MinReplicaSetSize: 1,
-				PartitionInformation: struct {
-					HighKey              string `json:"HighKey"`
-					ID                   string `json:"Id"`
-					LowKey               string `json:"LowKey"`
-					ServicePartitionKind string `json:"ServicePartitionKind"`
-				}{
+				PartitionInformation: sf.PartitionInformation{
 					HighKey:              "9223372036854775807",
 					ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
 					LowKey:               "-9223372036854775808",
@@ -78,11 +67,11 @@ func TestUpdateConfig(t *testing.T) {
 			},
 		},
 	}
-	instances := &sfsdk.InstanceItemsPage{
+	instances := &sf.InstanceItemsPage{
 		ContinuationToken: nil,
-		Items: []sfsdk.InstanceItem{
+		Items: []sf.InstanceItem{
 			{
-				ReplicaItemBase: &sfsdk.ReplicaItemBase{
+				ReplicaItemBase: &sf.ReplicaItemBase{
 					Address:                      "{\"Endpoints\":{\"\":\"http:\\/\\/localhost:8081\"}}",
 					HealthState:                  "Ok",
 					LastInBuildDurationInSeconds: "3",
@@ -148,7 +137,11 @@ func TestUpdateConfig(t *testing.T) {
 	ctx := context.Background()
 	pool := safe.NewPool(ctx)
 	defer pool.Stop()
-	provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
+
+	err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	timeout := make(chan string, 1)
 	go func() {
@@ -170,9 +163,8 @@ func TestUpdateConfig(t *testing.T) {
 }
 
 func TestIsPrimary(t *testing.T) {
-	provider := Provider{}
-	replica := &sfsdk.ReplicaItem{
-		ReplicaItemBase: &sfsdk.ReplicaItemBase{
+	replica := &sf.ReplicaItem{
+		ReplicaItemBase: &sf.ReplicaItemBase{
 			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
 			HealthState:                  "Ok",
 			LastInBuildDurationInSeconds: "1",
@@ -183,16 +175,15 @@ func TestIsPrimary(t *testing.T) {
 		},
 		ID: "131496928082309293",
 	}
-	isPrimary := provider.isPrimary(replica)
+	isPrimary := isPrimary(replica)
 	if !isPrimary {
 		t.Error("Failed to identify replica as primary")
 	}
 }
 
 func TestIsPrimaryWhenSecondary(t *testing.T) {
-	provider := Provider{}
-	replica := &sfsdk.ReplicaItem{
-		ReplicaItemBase: &sfsdk.ReplicaItemBase{
+	replica := &sf.ReplicaItem{
+		ReplicaItemBase: &sf.ReplicaItemBase{
 			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
 			HealthState:                  "Ok",
 			LastInBuildDurationInSeconds: "1",
@@ -203,15 +194,15 @@ func TestIsPrimaryWhenSecondary(t *testing.T) {
 		},
 		ID: "131496928082309293",
 	}
-	isPrimary := provider.isPrimary(replica)
+	isPrimary := isPrimary(replica)
 	if isPrimary {
 		t.Error("Incorrectly identified replica as primary")
 	}
 }
 
 func TestIsHealthy(t *testing.T) {
-	replica := &sfsdk.ReplicaItem{
-		ReplicaItemBase: &sfsdk.ReplicaItemBase{
+	replica := &sf.ReplicaItem{
+		ReplicaItemBase: &sf.ReplicaItemBase{
 			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
 			HealthState:                  "Ok",
 			LastInBuildDurationInSeconds: "1",
@@ -222,15 +213,15 @@ func TestIsHealthy(t *testing.T) {
 		},
 		ID: "131496928082309293",
 	}
-	isHealthy := isHealthy(*replica.ReplicaItemBase)
+	isHealthy := isHealthy(replica.ReplicaItemBase)
 	if !isHealthy {
 		t.Error("Failed to identify replica as healthy")
 	}
 }
 
 func TestIsHealthyWhenError(t *testing.T) {
-	replica := &sfsdk.ReplicaItem{
-		ReplicaItemBase: &sfsdk.ReplicaItemBase{
+	replica := &sf.ReplicaItem{
+		ReplicaItemBase: &sf.ReplicaItemBase{
 			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
 			HealthState:                  "Error",
 			LastInBuildDurationInSeconds: "1",
@@ -241,7 +232,7 @@ func TestIsHealthyWhenError(t *testing.T) {
 		},
 		ID: "131496928082309293",
 	}
-	isHealthy := isHealthy(*replica.ReplicaItemBase)
+	isHealthy := isHealthy(replica.ReplicaItemBase)
 	if isHealthy {
 		t.Error("Incorrectly identified replica as healthy")
 	}

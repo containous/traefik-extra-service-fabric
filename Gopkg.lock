@@ -46,7 +46,7 @@
   branch = "master"
   name = "github.com/containous/traefik"
   packages = ["autogen/gentemplates","job","log","provider","safe","tls","tls/generate","types"]
-  revision = "f6181ef3e2e7ae65f04fc3c600cdd198c28f0fba"
+  revision = "0ca65f955da2d4f32dfb882b17fc0bce7a421f1c"
 
 [[projects]]
   name = "github.com/docker/libkv"
@@ -70,7 +70,7 @@
   branch = "master"
   name = "github.com/jjcollinge/servicefabric"
   packages = ["."]
-  revision = "ad8404f6061cb76815324e58532f804ac44ec363"
+  revision = "93a44e59fc887cda489913c6fc5bda834989f3bd"
 
 [[projects]]
   branch = "master"
@@ -94,7 +94,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["pbkdf2","scrypt"]
-  revision = "9f005a07e0d31d45e6656d241bb5c0f2efd4bc94"
+  revision = "b080dc9a8c480b08e698fb1219160d598526310f"
 
 [[projects]]
   branch = "master"
@@ -106,7 +106,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "82aafbf43bf885069dc71b7e7c2f9d7a614d47da"
+  revision = "4ff8c001ce4cc464e644b922325097228fce14d8"
 
 [solve-meta]
   analyzer-name = "dep"
