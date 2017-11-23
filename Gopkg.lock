@@ -37,12 +37,6 @@
   revision = "309aa717adbf351e92864cbedf9cca0b769a4b5a"
 
 [[projects]]
-  name = "github.com/cloudflare/cfssl"
-  packages = ["log"]
-  revision = "db0d0650b6496bfe8061ec56a92edd32d8e75c30"
-  version = "1.2.0"
-
-[[projects]]
   name = "github.com/containous/flaeg"
   packages = ["."]
   revision = "4b6f66624dce34a226f080b414c4705ea8731bc5"
@@ -52,7 +46,7 @@
   branch = "master"
   name = "github.com/containous/traefik"
   packages = ["autogen/gentemplates","job","log","provider","safe","tls","tls/generate","types"]
-  revision = "5dc1ec68a396ae540f57a3b06f832f59282a0c12"
+  revision = "f6181ef3e2e7ae65f04fc3c600cdd198c28f0fba"
 
 [[projects]]
   name = "github.com/docker/libkv"
@@ -76,7 +70,7 @@
   branch = "master"
   name = "github.com/jjcollinge/servicefabric"
   packages = ["."]
-  revision = "be2b731fc787bca325d1601a5c9ff020d8f174e4"
+  revision = "ad8404f6061cb76815324e58532f804ac44ec363"
 
 [[projects]]
   branch = "master"
@@ -106,7 +100,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "9dfe39835686865bff950a07b394c12a98ddc811"
+  revision = "c7086645de248775cbf2373cf5ca4d2fa664b8c1"
 
 [[projects]]
   branch = "master"
