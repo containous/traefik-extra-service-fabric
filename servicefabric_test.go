@@ -3,7 +3,7 @@ package servicefabric
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -85,7 +85,7 @@ func TestUpdateConfig(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		"expose":                      "",
+		"expose":                      "true",
 		"frontend.rule.default":       "Path: /",
 		"backend.loadbalancer.method": "wrr",
 		"backend.circuitbreaker":      "NetworkErrorRatio() > 0.5",
@@ -155,7 +155,7 @@ func TestUpdateConfig(t *testing.T) {
 		if err != nil {
 			res, _ := json.Marshal(actual)
 			t.Log(string(res))
-			t.Error("actual != expected")
+			t.Error(err)
 		}
 	case <-timeout:
 		t.Error("Provider failed to return configuration")
@@ -255,7 +255,7 @@ func compareConfigurations(actual, expected types.ConfigMessage) error {
 				expectedFrontendsStr := string(expectedFrontends)
 
 				if actualFrontendsStr != expectedFrontendsStr {
-					return errors.New("backend configuration differs from expected configuration")
+					return fmt.Errorf("backend configuration differs from expected configuration: got %q, want %q", actualFrontendsStr, expectedFrontendsStr)
 				}
 
 				actualBackends, err := json.Marshal(actual.Configuration.Backends)
@@ -274,7 +274,9 @@ func compareConfigurations(actual, expected types.ConfigMessage) error {
 				}
 				return nil
 			}
+			return fmt.Errorf("backends count differs from expected: got %+v, want %+v", actual.Configuration.Backends, expected.Configuration.Backends)
 		}
+		return fmt.Errorf("frontends count differs from expected: got %+v, want %+v", actual.Configuration.Frontends, expected.Configuration.Frontends)
 	}
-	return errors.New("provider name differs from expected")
+	return fmt.Errorf("provider name differs from expected: got %q, want %q", actual.ProviderName, expected.ProviderName)
 }
