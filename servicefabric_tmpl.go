@@ -58,7 +58,7 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
 
-            {{$backendName := getBackendName $service.Name $partition}}
+            {{$backendName := (print $service.Name $partition.PartitionInformation.ID)}}
             [backends."{{$backendName}}".servers."{{$replica.ID}}"]
             url = "{{getDefaultEndpoint $replica}}"
             weight = 1
@@ -124,16 +124,16 @@ const tmpl = `
 
     {{else if eq $service.ServiceKind "Stateful"}}
       {{range $partition := $service.Partitions}}
-        {{if hasLabel $service "frontend.rule"}}
-          {{$partitionId := $partition.PartitionInformation.ID}}
+        {{$partitionId := $partition.PartitionInformation.ID}}
 
+        {{if hasLabel $service "frontend.rule"}}
           [frontends."{{$service.Name}}/{{$partitionId}}"]
-          backend = {{getBackendName $service.Name $partition}}
+          backend = "{{$service.Name}}/{{$partitionId}}"
           [frontends."{{$service.Name}}/{{$partitionId}}".routes.default]
           rule = {{getLabelValue $service "frontend.rule.partition.$partitionId"}}
 
-        {{end}}
       {{end}}
+    {{end}}
   {{end}}
 {{end}}
 {{end}}
