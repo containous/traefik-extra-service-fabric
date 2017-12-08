@@ -58,7 +58,7 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
 
-            {{$backendName := (print $service.Name $partition.PartitionInformation.ID)}}
+            {{$backendName := getBackendName $service.Name $partition}}
             [backends."{{$backendName}}".servers."{{$replica.ID}}"]
             url = "{{getDefaultEndpoint $replica}}"
             weight = 1
@@ -128,7 +128,7 @@ const tmpl = `
 
         {{if hasServiceLabel $service "frontend.rule"}}
           [frontends."{{$service.Name}}/{{$partitionId}}"]
-          backend = "{{$service.Name}}/{{$partitionId}}"
+          backend = "{{getBackendName $service.Name $partition}}"
           [frontends."{{$service.Name}}/{{$partitionId}}".routes.default]
           rule = {{getServiceLabelValue $service "frontend.rule.partition.$partitionId"}}
 

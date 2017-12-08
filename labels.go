@@ -1,6 +1,8 @@
 package servicefabric
 
-import "strings"
+import (
+	"strings"
+)
 
 func hasServiceLabel(service ServiceItemExtended, key string) bool {
 	_, exists := service.Labels[key]
