@@ -81,19 +81,19 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 				}
 
 				var sfFuncMap = template.FuncMap{
-					"isPrimary":                       isPrimary,
-					"getDefaultEndpoint":              p.getDefaultEndpoint,
-					"getNamedEndpoint":                p.getNamedEndpoint,
-					"getApplicationParameter":         p.getApplicationParameter,
-					"doesAppParamContain":             p.doesAppParamContain,
-					"hasServiceLabel":                 hasServiceLabel,
-					"getServiceLabelValue":            getServiceLabelValue,
-					"getServiceLabelValueWithDefault": getServiceLabelValueWithDefault,
-					"getServiceLabelsWithPrefix":      getServiceLabelsWithPrefix,
-					"getServicesWithLabelValueMap":    getServicesWithLabelValueMap,
-					"getServicesWithLabelValue":       getServicesWithLabelValue,
-					"isExposed":                       getFuncBoolLabel("expose"),
-					"getBackendName":                  getBackendName,
+					"isPrimary":                    isPrimary,
+					"getDefaultEndpoint":           p.getDefaultEndpoint,
+					"getNamedEndpoint":             p.getNamedEndpoint,
+					"getApplicationParameter":      p.getApplicationParameter,
+					"doesAppParamContain":          p.doesAppParamContain,
+					"hasLabel":                     hasFunc(),
+					"getLabelValue":                getFuncStringLabel(""),
+					"getLabelValueWithDefault":     getFuncStringLabelWithDefault(),
+					"getLabelsWithPrefix":          getLabelsWithPrefix,
+					"getServicesWithLabelValueMap": getServicesWithLabelValueMap,
+					"getServicesWithLabelValue":    getServicesWithLabelValue, // FIXME unused
+					"isExposed":                    getFuncBoolLabel("expose", false),
+					"getBackendName":               getBackendName,
 				}
 
 				configuration, err := p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
@@ -262,16 +262,7 @@ func getServicesWithLabelValue(services []ServiceItemExtended, key, expectedValu
 	return srvWithLabel
 }
 
-func getServiceLabelValueWithDefault(service ServiceItemExtended, key, defaultValue string) string {
-	value, exists := service.Labels[key]
-
-	if !exists {
-		return defaultValue
-	}
-	return value
-}
-
-func getServiceLabelsWithPrefix(service ServiceItemExtended, prefix string) map[string]string {
+func getLabelsWithPrefix(service ServiceItemExtended, prefix string) map[string]string {
 	results := make(map[string]string)
 	for k, v := range service.Labels {
 		if strings.HasPrefix(k, prefix) {
