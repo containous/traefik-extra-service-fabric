@@ -93,6 +93,7 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 					"getServicesWithLabelValueMap":    getServicesWithLabelValueMap,
 					"getServicesWithLabelValue":       getServicesWithLabelValue,
 					"isExposed":                       getFuncBoolLabel("expose"),
+					"getBackendName":                  getBackendName,
 				}
 
 				configuration, err := p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
@@ -347,4 +348,8 @@ func getNamedEndpoint(endpointData string, endpointName string) (string, error) 
 		return "", errors.New("endpoint doesn't exist")
 	}
 	return endpoint, nil
+}
+
+func getBackendName(service ServiceItemExtended, partition PartitionItemExtended) string {
+	return provider.Normalize(service.Name + partition.PartitionInformation.ID)
 }
