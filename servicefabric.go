@@ -69,35 +69,7 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 					log.Info("Checking service fabric config")
 				}
 
-				services, err := getClusterServices(sfClient)
-				if err != nil {
-					return err
-				}
-
-				templateObjects := struct {
-					Services []ServiceItemExtended
-				}{
-					services,
-				}
-
-				var sfFuncMap = template.FuncMap{
-					"isPrimary":                    isPrimary,
-					"getDefaultEndpoint":           p.getDefaultEndpoint,
-					"getNamedEndpoint":             p.getNamedEndpoint,
-					"getApplicationParameter":      p.getApplicationParameter,
-					"doesAppParamContain":          p.doesAppParamContain,
-					"hasLabel":                     hasFunc(),
-					"getLabelValue":                getFuncStringLabel(""),
-					"getLabelValueWithDefault":     getFuncStringLabelWithDefault(),
-					"getLabelsWithPrefix":          getLabelsWithPrefix,
-					"getServicesWithLabelValueMap": getServicesWithLabelValueMap,
-					"getServicesWithLabelValue":    getServicesWithLabelValue, // FIXME unused
-					"isExposed":                    getFuncBoolLabel("expose", false),
-					"getBackendName":               getBackendName,
-				}
-
-				configuration, err := p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
-
+				configuration, err := p.buildConfiguration(sfClient)
 				if err != nil {
 					return err
 				}
@@ -121,24 +93,40 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 	return nil
 }
 
-func (p Provider) doesAppParamContain(app sf.ApplicationItem, key, shouldContain string) bool {
-	value := p.getApplicationParameter(app, key)
-	return strings.Contains(value, shouldContain)
-}
-
-func (p Provider) getApplicationParameter(app sf.ApplicationItem, key string) string {
-	for _, param := range app.Parameters {
-		if param.Key == key {
-			return param.Value
-		}
+func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, error) {
+	var sfFuncMap = template.FuncMap{
+		"isPrimary":                    isPrimary,
+		"getDefaultEndpoint":           getDefaultEndpoint,
+		"getNamedEndpoint":             getNamedEndpoint,
+		"getApplicationParameter":      getApplicationParameter,
+		"doesAppParamContain":          doesAppParamContain,
+		"hasLabel":                     hasFunc(),
+		"getLabelValue":                getFuncStringLabel(""),
+		"getLabelValueWithDefault":     getFuncStringLabelWithDefault(),
+		"getLabelsWithPrefix":          getLabelsWithPrefix,
+		"getServicesWithLabelValueMap": getServicesWithLabelValueMap,
+		"getServicesWithLabelValue":    getServicesWithLabelValue, // FIXME unused
+		"isExposed":                    getFuncBoolLabel("expose", false),
+		"getBackendName":               getBackendName,
 	}
-	log.Errorf("Parameter %s doesn't exist in app %s", key, app.Name)
-	return ""
+
+	services, err := getClusterServices(sfClient)
+	if err != nil {
+		return nil, err
+	}
+
+	templateObjects := struct {
+		Services []ServiceItemExtended
+	}{
+		services,
+	}
+
+	return p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
 }
 
-func (p Provider) getDefaultEndpoint(instance replicaInstance) string {
+func getDefaultEndpoint(instance replicaInstance) string {
 	id, data := instance.GetReplicaData()
-	endpoint, err := getDefaultEndpoint(data.Address)
+	endpoint, err := getReplicaDefaultEndpoint(data)
 	if err != nil {
 		log.Warnf("No default endpoint for replica %s in service %s endpointData: %s", id, data.Address)
 		return ""
@@ -146,14 +134,62 @@ func (p Provider) getDefaultEndpoint(instance replicaInstance) string {
 	return endpoint
 }
 
-func (p Provider) getNamedEndpoint(instance replicaInstance, endpointName string) string {
-	id, data := instance.GetReplicaData()
-	endpoint, err := getNamedEndpoint(data.Address, endpointName)
+func getReplicaDefaultEndpoint(replicaData *sf.ReplicaItemBase) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
 	if err != nil {
-		log.Warnf("No names endpoint of %s for replica %s in endpointData: %s", endpointName, id, data.Address)
+		return "", err
+	}
+
+	var defaultHTTPEndpoint string
+	for _, v := range endpoints {
+		if strings.Contains(v, "http") {
+			defaultHTTPEndpoint = v
+			break
+		}
+	}
+
+	if len(defaultHTTPEndpoint) == 0 {
+		return "", errors.New("no default endpoint found")
+	}
+	return defaultHTTPEndpoint, nil
+}
+
+func getNamedEndpoint(instance replicaInstance, endpointName string) string {
+	id, data := instance.GetReplicaData()
+	endpoint, err := getReplicaNamedEndpoint(data, endpointName)
+	if err != nil {
+		log.Warnf("No names endpoint of %s for replica %s in endpointData: %s. Error: %v", endpointName, id, data.Address, err)
 		return ""
 	}
 	return endpoint
+}
+
+func getReplicaNamedEndpoint(replicaData *sf.ReplicaItemBase, endpointName string) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
+	if err != nil {
+		return "", err
+	}
+
+	endpoint, exists := endpoints[endpointName]
+	if !exists {
+		return "", errors.New("endpoint doesn't exist")
+	}
+	return endpoint, nil
+}
+
+func doesAppParamContain(app sf.ApplicationItem, key, shouldContain string) bool {
+	value := getApplicationParameter(app, key)
+	return strings.Contains(value, shouldContain)
+}
+
+func getApplicationParameter(app sf.ApplicationItem, key string) string {
+	for _, param := range app.Parameters {
+		if param.Key == key {
+			return param.Value
+		}
+	}
+	log.Errorf("Parameter %s doesn't exist in app %s", key, app.Name)
+	return ""
 }
 
 func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
@@ -282,7 +318,7 @@ func isHealthy(instanceData *sf.ReplicaItemBase) bool {
 }
 
 func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
-	_, err := getDefaultEndpoint(instanceData.Address)
+	_, err := getReplicaDefaultEndpoint(instanceData)
 	return err == nil
 }
 
@@ -304,41 +340,6 @@ func decodeEndpointData(endpointData string) (map[string]string, error) {
 	}
 
 	return endpoints, nil
-}
-
-func getDefaultEndpoint(endpointData string) (string, error) {
-	endpoints, err := decodeEndpointData(endpointData)
-	if err != nil {
-		return "", err
-	}
-
-	var defaultHTTPEndpointExists bool
-	var defaultHTTPEndpoint string
-	for _, v := range endpoints {
-		if strings.Contains(v, "http") {
-			defaultHTTPEndpoint = v
-			defaultHTTPEndpointExists = true
-			break
-		}
-	}
-
-	if !defaultHTTPEndpointExists {
-		return "", errors.New("no default endpoint found")
-	}
-	return defaultHTTPEndpoint, nil
-}
-
-func getNamedEndpoint(endpointData string, endpointName string) (string, error) {
-	endpoints, err := decodeEndpointData(endpointData)
-	if err != nil {
-		return "", err
-	}
-
-	endpoint, exists := endpoints[endpointName]
-	if !exists {
-		return "", errors.New("endpoint doesn't exist")
-	}
-	return endpoint, nil
 }
 
 func getBackendName(service ServiceItemExtended, partition PartitionItemExtended) string {

@@ -72,7 +72,7 @@ func TestUpdateConfig(t *testing.T) {
 		Items: []sf.InstanceItem{
 			{
 				ReplicaItemBase: &sf.ReplicaItemBase{
-					Address:                      "{\"Endpoints\":{\"\":\"http:\\/\\/localhost:8081\"}}",
+					Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
 					HealthState:                  "Ok",
 					LastInBuildDurationInSeconds: "3",
 					NodeName:                     "_Node_0",
@@ -163,78 +163,156 @@ func TestUpdateConfig(t *testing.T) {
 }
 
 func TestIsPrimary(t *testing.T) {
-	replica := &sf.ReplicaItem{
-		ReplicaItemBase: &sf.ReplicaItemBase{
-			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
-			HealthState:                  "Ok",
-			LastInBuildDurationInSeconds: "1",
-			NodeName:                     "_Node_0",
-			ReplicaRole:                  "Primary",
-			ReplicaStatus:                "Ready",
-			ServiceKind:                  "Stateful",
+	testCases := []struct {
+		desc     string
+		replica  *sf.ReplicaItem
+		expected bool
+	}{
+		{
+			desc: "when primary",
+			replica: &sf.ReplicaItem{
+				ReplicaItemBase: &sf.ReplicaItemBase{
+					Address:                      `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+					HealthState:                  "Ok",
+					LastInBuildDurationInSeconds: "1",
+					NodeName:                     "_Node_0",
+					ReplicaRole:                  "Primary",
+					ReplicaStatus:                "Ready",
+					ServiceKind:                  "Stateful",
+				},
+				ID: "131496928082309293",
+			},
+			expected: true,
 		},
-		ID: "131496928082309293",
+		{
+			desc: "When secondary",
+			replica: &sf.ReplicaItem{
+				ReplicaItemBase: &sf.ReplicaItemBase{
+					Address:                      `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+					HealthState:                  "Ok",
+					LastInBuildDurationInSeconds: "1",
+					NodeName:                     "_Node_0",
+					ReplicaRole:                  "Secondary",
+					ReplicaStatus:                "Ready",
+					ServiceKind:                  "Stateful",
+				},
+				ID: "131496928082309293",
+			},
+			expected: false,
+		},
 	}
-	isPrimary := isPrimary(replica)
-	if !isPrimary {
-		t.Error("Failed to identify replica as primary")
-	}
-}
 
-func TestIsPrimaryWhenSecondary(t *testing.T) {
-	replica := &sf.ReplicaItem{
-		ReplicaItemBase: &sf.ReplicaItemBase{
-			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
-			HealthState:                  "Ok",
-			LastInBuildDurationInSeconds: "1",
-			NodeName:                     "_Node_0",
-			ReplicaRole:                  "Secondary",
-			ReplicaStatus:                "Ready",
-			ServiceKind:                  "Stateful",
-		},
-		ID: "131496928082309293",
-	}
-	isPrimary := isPrimary(replica)
-	if isPrimary {
-		t.Error("Incorrectly identified replica as primary")
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			primary := isPrimary(test.replica)
+
+			if !primary && test.expected || primary && !test.expected {
+				t.Errorf("Incorrectly identified primary state of a replica. Got %v, expected %v", primary, test.expected)
+			}
+		})
 	}
 }
 
 func TestIsHealthy(t *testing.T) {
-	replica := &sf.ReplicaItem{
-		ReplicaItemBase: &sf.ReplicaItemBase{
-			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
-			HealthState:                  "Ok",
-			LastInBuildDurationInSeconds: "1",
-			NodeName:                     "_Node_0",
-			ReplicaRole:                  "Primary",
-			ReplicaStatus:                "Ready",
-			ServiceKind:                  "Stateful",
+	testCases := []struct {
+		desc     string
+		replica  *sf.ReplicaItem
+		expected bool
+	}{
+		{
+			desc: "when healthy",
+			replica: &sf.ReplicaItem{
+				ReplicaItemBase: &sf.ReplicaItemBase{
+					Address:                      `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+					HealthState:                  "Ok",
+					LastInBuildDurationInSeconds: "1",
+					NodeName:                     "_Node_0",
+					ReplicaRole:                  "Primary",
+					ReplicaStatus:                "Ready",
+					ServiceKind:                  "Stateful",
+				},
+				ID: "131496928082309293",
+			},
+			expected: true,
 		},
-		ID: "131496928082309293",
+		{
+			desc: "When error",
+			replica: &sf.ReplicaItem{
+				ReplicaItemBase: &sf.ReplicaItemBase{
+					Address:                      `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+					HealthState:                  "Error",
+					LastInBuildDurationInSeconds: "1",
+					NodeName:                     "_Node_0",
+					ReplicaRole:                  "Primary",
+					ReplicaStatus:                "Error",
+					ServiceKind:                  "Stateful",
+				},
+				ID: "131496928082309293",
+			},
+			expected: false,
+		},
 	}
-	isHealthy := isHealthy(replica.ReplicaItemBase)
-	if !isHealthy {
-		t.Error("Failed to identify replica as healthy")
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			healthy := isHealthy(test.replica.ReplicaItemBase)
+
+			if !healthy && test.expected || healthy && !test.expected {
+				t.Errorf("Incorrectly identified healthy state of a replica. Got %v, expected %v", healthy, test.expected)
+			}
+		})
 	}
 }
 
-func TestIsHealthyWhenError(t *testing.T) {
-	replica := &sf.ReplicaItem{
-		ReplicaItemBase: &sf.ReplicaItemBase{
-			Address:                      "{\"Endpoints\":{\"\":\"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293\"}}",
-			HealthState:                  "Error",
-			LastInBuildDurationInSeconds: "1",
-			NodeName:                     "_Node_0",
-			ReplicaRole:                  "Primary",
-			ReplicaStatus:                "Error",
-			ServiceKind:                  "Stateful",
+func TestGetReplicaDefaultEndpoint(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		replicaData      *sf.ReplicaItemBase
+		expectedEndpoint string
+		errorExpected    bool
+	}{
+		{
+			desc: "valid default endpoint",
+			replicaData: &sf.ReplicaItemBase{
+				Address: `{"Endpoints":{"":"http://localhost:8081"}}`,
+			},
+			expectedEndpoint: "http://localhost:8081",
 		},
-		ID: "131496928082309293",
+		{
+			desc: "invalid default endpoint",
+			replicaData: &sf.ReplicaItemBase{
+				Address: `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+			},
+			errorExpected: true,
+		},
 	}
-	isHealthy := isHealthy(replica.ReplicaItemBase)
-	if isHealthy {
-		t.Error("Incorrectly identified replica as healthy")
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			defaultEndpoint, err := getReplicaDefaultEndpoint(test.replicaData)
+			if test.errorExpected {
+				if err == nil {
+					t.Fatal("Expected an error, got no error")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+
+				if defaultEndpoint != test.expectedEndpoint {
+					t.Errorf("Got %s, want %s", defaultEndpoint, test.expectedEndpoint)
+				}
+			}
+		})
 	}
 }
 
