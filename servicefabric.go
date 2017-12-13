@@ -95,19 +95,18 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 
 func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, error) {
 	var sfFuncMap = template.FuncMap{
-		"isPrimary":                    isPrimary,
-		"getDefaultEndpoint":           getDefaultEndpoint,
-		"getNamedEndpoint":             getNamedEndpoint,
-		"getApplicationParameter":      getApplicationParameter,
-		"doesAppParamContain":          doesAppParamContain,
-		"hasLabel":                     hasFunc(),
-		"getLabelValue":                getFuncStringLabel(""),
-		"getLabelValueWithDefault":     getFuncStringLabelWithDefault(),
-		"getLabelsWithPrefix":          getLabelsWithPrefix,
-		"getServicesWithLabelValueMap": getServicesWithLabelValueMap,
-		"getServicesWithLabelValue":    getServicesWithLabelValue, // FIXME unused
-		"isExposed":                    getFuncBoolLabel("expose", false),
-		"getBackendName":               getBackendName,
+		"getServices":                getServices,
+		"hasLabel":                   hasFuncService,
+		"getLabelValue":              getFuncServiceStringLabel,
+		"getLabelsWithPrefix":        getServiceLabelsWithPrefix,
+		"isPrimary":                  isPrimary,
+		"isExposed":                  getFuncBoolLabel("expose", false),
+		"getBackendName":             getBackendName,
+		"getDefaultEndpoint":         getDefaultEndpoint,
+		"getNamedEndpoint":           getNamedEndpoint,           // FIXME unused
+		"getApplicationParameter":    getApplicationParameter,    // FIXME unused
+		"doesAppParamContain":        doesAppParamContain,        // FIXME unused
+		"filterServicesByLabelValue": filterServicesByLabelValue, // FIXME unused
 	}
 
 	services, err := getClusterServices(sfClient)
@@ -118,7 +117,7 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 	templateObjects := struct {
 		Services []ServiceItemExtended
 	}{
-		services,
+		Services: services,
 	}
 
 	return p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
@@ -273,7 +272,7 @@ func getValidInstances(sfClient sfClient, app sf.ApplicationItem, service sf.Ser
 	return validInstances
 }
 
-func getServicesWithLabelValueMap(services []ServiceItemExtended, key string) map[string][]ServiceItemExtended {
+func getServices(services []ServiceItemExtended, key string) map[string][]ServiceItemExtended {
 	result := map[string][]ServiceItemExtended{}
 	for _, service := range services {
 		if value, exists := service.Labels[key]; exists {
@@ -287,7 +286,7 @@ func getServicesWithLabelValueMap(services []ServiceItemExtended, key string) ma
 	return result
 }
 
-func getServicesWithLabelValue(services []ServiceItemExtended, key, expectedValue string) []ServiceItemExtended {
+func filterServicesByLabelValue(services []ServiceItemExtended, key, expectedValue string) []ServiceItemExtended {
 	var srvWithLabel []ServiceItemExtended
 	for _, service := range services {
 		value, exists := service.Labels[key]
@@ -296,16 +295,6 @@ func getServicesWithLabelValue(services []ServiceItemExtended, key, expectedValu
 		}
 	}
 	return srvWithLabel
-}
-
-func getLabelsWithPrefix(service ServiceItemExtended, prefix string) map[string]string {
-	results := make(map[string]string)
-	for k, v := range service.Labels {
-		if strings.HasPrefix(k, prefix) {
-			results[k] = v
-		}
-	}
-	return results
 }
 
 func isPrimary(instance replicaInstance) bool {
