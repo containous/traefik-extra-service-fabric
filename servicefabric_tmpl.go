@@ -1,8 +1,8 @@
 package servicefabric
 
 const tmpl = `
+{{$groupedServiceMap := getServices .Services "backend.group.name"}}
 [backends]
-    {{$groupedServiceMap := getServicesWithLabelValueMap .Services "backend.group.name"}}
     {{range $aggName, $aggServices := $groupedServiceMap }}
       [backends."{{$aggName}}"]
       {{range $service := $aggServices}}
@@ -10,7 +10,7 @@ const tmpl = `
           {{range $instance := $partition.Instances}}
             [backends."{{$aggName}}".servers."{{$service.ID}}-{{$instance.ID}}"]
             url = "{{getDefaultEndpoint $instance}}"
-            weight = {{getLabelValueWithDefault $service "backend.group.weight" "1"}}
+            weight = {{getLabelValue $service "backend.group.weight" "1"}}
           {{end}}
         {{end}}
       {{end}}
@@ -21,15 +21,15 @@ const tmpl = `
       [backends."{{$service.Name}}"]
         [backends."{{$service.Name}}".LoadBalancer]
         {{if hasLabel $service "backend.loadbalancer.method"}}
-          method = "{{getLabelValue $service "backend.loadbalancer.method" }}"
+          method = "{{getLabelValue $service "backend.loadbalancer.method" "" }}"
         {{else}}
           method = "drr"
         {{end}}
 
         {{if hasLabel $service "backend.healthcheck"}}
           [backends."{{$service.Name}}".healthcheck]
-          path = "{{getLabelValue $service "backend.healthcheck"}}"
-          interval = "{{getLabelValueWithDefault $service "backend.healthcheck.interval" "10s"}}"
+          path = "{{getLabelValue $service "backend.healthcheck" ""}}"
+          interval = "{{getLabelValue $service "backend.healthcheck.interval" "10s"}}"
         {{end}}
 
         {{if hasLabel $service "backend.loadbalancer.stickiness"}}
@@ -38,21 +38,21 @@ const tmpl = `
 
         {{if hasLabel $service "backend.circuitbreaker"}}
           [backends."{{$service.Name}}".circuitbreaker]
-          expression = "{{getLabelValue $service "backend.circuitbreaker"}}"
+          expression = "{{getLabelValue $service "backend.circuitbreaker" ""}}"
         {{end}}
 
         {{if hasLabel $service "backend.maxconn.amount"}}
           [backends."{{$service.Name}}".maxconn]
-          amount = {{getLabelValue $service "backend.maxconn.amount"}}
+          amount = {{getLabelValue $service "backend.maxconn.amount" ""}}
           {{if hasLabel $service "backend.maxconn.extractorfunc"}}
-          extractorfunc = "{{getLabelValue $service "backend.maxconn.extractorfunc"}}"
+          extractorfunc = "{{getLabelValue $service "backend.maxconn.extractorfunc" ""}}"
           {{end}}
         {{end}}
 
         {{range $instance := $partition.Instances}}
           [backends."{{$service.Name}}".servers."{{$instance.ID}}"]
           url = "{{getDefaultEndpoint $instance}}"
-          weight = {{getLabelValueWithDefault $service "backend.weight" "1"}}
+          weight = {{getLabelValue $service "backend.weight" "1"}}
         {{end}}
       {{else if eq $partition.ServiceKind "Stateful"}}
         {{range $replica := $partition.Replicas}}
@@ -98,23 +98,23 @@ const tmpl = `
     backend = "{{$service.Name}}"
 
     {{if hasLabel $service "frontend.passHostHeader"}}
-      passHostHeader = {{getLabelValue $service "frontend.passHostHeader" }}
+      passHostHeader = {{getLabelValue $service "frontend.passHostHeader"  ""}}
     {{end}}
 
     {{if hasLabel $service "frontend.whitelistSourceRange"}}
-      whitelistSourceRange = {{getLabelValue $service "frontend.whitelistSourceRange" }}
+      whitelistSourceRange = {{getLabelValue $service "frontend.whitelistSourceRange"  ""}}
     {{end}}
 
     {{if hasLabel $service "frontend.priority"}}
-      priority = {{getLabelValue $service "frontend.priority"}}
+      priority = {{getLabelValue $service "frontend.priority" ""}}
     {{end}}
 
     {{if hasLabel $service "frontend.basicAuth"}}
-      basicAuth = {{getLabelValue $service "frontend.basicAuth"}}
+      basicAuth = {{getLabelValue $service "frontend.basicAuth" ""}}
     {{end}}
 
     {{if hasLabel $service "frontend.entryPoints"}}
-      entryPoints = {{getLabelValue $service "frontend.entryPoints"}}
+      entryPoints = {{getLabelValue $service "frontend.entryPoints" ""}}
     {{end}}
 
     {{range $key, $value := getLabelsWithPrefix $service "frontend.rule"}}
@@ -130,7 +130,7 @@ const tmpl = `
           [frontends."{{$service.Name}}/{{$partitionId}}"]
           backend = "{{getBackendName $service.Name $partition}}"
           [frontends."{{$service.Name}}/{{$partitionId}}".routes.default]
-          rule = {{getLabelValue $service "frontend.rule.partition.$partitionId"}}
+          rule = {{getLabelValue $service "frontend.rule.partition.$partitionId" ""}}
 
       {{end}}
     {{end}}
