@@ -215,16 +215,11 @@ func TestFrontendLabelConfig(t *testing.T) {
 		},
 	}
 
-	provider := Provider{}
-	ctx := context.Background()
-	pool := safe.NewPool(ctx)
-	defer pool.Stop()
-
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-
+			provider := Provider{}
 			client := &clientMock{
 				applications: apps,
 				services:     services,
@@ -233,38 +228,24 @@ func TestFrontendLabelConfig(t *testing.T) {
 				instances:    instances,
 				labels:       test.labels,
 			}
-			configurationChan := make(chan types.ConfigMessage)
-			err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
+			config, err := provider.buildConfiguration(client)
 
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 
-			timeout := make(chan string, 1)
-			go func() {
-				time.Sleep(time.Second * 2)
-				timeout <- "Timeout triggered"
-			}()
+			if len(config.Frontends) != 1 {
+				t.Error("No frontends present in the config")
+			}
 
-			select {
-			case <-timeout:
-				t.Error("Provider failed to return configuration")
-			case actual := <-configurationChan:
-				if len(actual.Configuration.Frontends) != 1 {
-					t.Error("No frontends present in the config")
+			for _, frontend := range config.Frontends {
+				if frontend == nil {
+					t.Error("Frontend is nil")
 				}
-
-				for _, frontend := range actual.Configuration.Frontends {
-					if frontend == nil {
-						t.Error("Frontend is nil")
-					}
-					if !test.validate(*frontend) {
-						frontendJSON, _ := getJSON(frontend)
-						t.Log(frontendJSON)
-						t.Fail()
-					}
-					break
-
+				if !test.validate(*frontend) {
+					frontendJSON, _ := getJSON(frontend)
+					t.Log(frontendJSON)
+					t.Fail()
 				}
 			}
 		})
