@@ -254,6 +254,22 @@ func TestIsHealthy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			desc: "When replica down but health only warning",
+			replica: &sf.ReplicaItem{
+				ReplicaItemBase: &sf.ReplicaItemBase{
+					Address:                      `{"Endpoints":{"":"localhost:30001+bce46a8c-b62d-4996-89dc-7ffc00a96902-131496928082309293"}}`,
+					HealthState:                  "Warning",
+					LastInBuildDurationInSeconds: "1",
+					NodeName:                     "_Node_0",
+					ReplicaRole:                  "Primary",
+					ReplicaStatus:                "Down",
+					ServiceKind:                  "Stateful",
+				},
+				ID: "131496928082309293",
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range testCases {
