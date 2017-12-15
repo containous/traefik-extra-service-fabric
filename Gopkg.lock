@@ -45,7 +45,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/containous/traefik"
-  packages = ["autogen/gentemplates","job","log","provider","safe","tls","tls/generate","types"]
+  packages = ["autogen/gentemplates","job","log","provider","provider/label","safe","tls","tls/generate","types"]
   revision = "c66d9de759b4bdebf8e170539eac1bcdd1295894"
 
 [[projects]]
@@ -111,6 +111,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "416c19433395ee38c69ccff5eddf90cababcf7336231d740a9847a937dcbb3b7"
+  inputs-digest = "08bb135bc0df562ae59ace5c6d190d9cf3da44adf97a5b92e0930a7e81c21f96"
   solver-name = "gps-cdcl"
   solver-version = 1

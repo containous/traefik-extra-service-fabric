@@ -7,89 +7,92 @@ import (
 	"testing"
 	"time"
 
+	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
 )
 
-func TestUpdateConfig(t *testing.T) {
-	apps := &sf.ApplicationItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.ApplicationItem{
-			{
-				HealthState: "Ok",
-				ID:          "TestApplication",
-				Name:        "fabric:/TestApplication",
-				Parameters: []*sf.AppParameter{
-					{Key: "TraefikPublish", Value: "fabric:/TestApplication/TestService"},
-				},
-				Status:      "Ready",
-				TypeName:    "TestApplicationType",
-				TypeVersion: "1.0.0",
+var apps = &sf.ApplicationItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.ApplicationItem{
+		{
+			HealthState: "Ok",
+			ID:          "TestApplication",
+			Name:        "fabric:/TestApplication",
+			Parameters: []*sf.AppParameter{
+				{Key: "TraefikPublish", Value: "fabric:/TestApplication/TestService"},
 			},
+			Status:      "Ready",
+			TypeName:    "TestApplicationType",
+			TypeVersion: "1.0.0",
 		},
-	}
-	services := &sf.ServiceItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.ServiceItem{
-			{
-				HasPersistedState: true,
-				HealthState:       "Ok",
-				ID:                "TestApplication/TestService",
-				IsServiceGroup:    false,
-				ManifestVersion:   "1.0.0",
-				Name:              "fabric:/TestApplication/TestService",
-				ServiceKind:       "Stateless",
-				ServiceStatus:     "Active",
-				TypeName:          "TestServiceType",
-			},
+	},
+}
+var services = &sf.ServiceItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.ServiceItem{
+		{
+			HasPersistedState: true,
+			HealthState:       "Ok",
+			ID:                "TestApplication/TestService",
+			IsServiceGroup:    false,
+			ManifestVersion:   "1.0.0",
+			Name:              "fabric:/TestApplication/TestService",
+			ServiceKind:       "Stateless",
+			ServiceStatus:     "Active",
+			TypeName:          "TestServiceType",
 		},
-	}
-	partitions := &sf.PartitionItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.PartitionItem{
-			{
-				CurrentConfigurationEpoch: sf.ConfigurationEpoch{
-					ConfigurationVersion: "12884901891",
-					DataLossVersion:      "131496928071680379",
-				},
-				HealthState:       "Ok",
-				MinReplicaSetSize: 1,
-				PartitionInformation: sf.PartitionInformation{
-					HighKey:              "9223372036854775807",
-					ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
-					LowKey:               "-9223372036854775808",
-					ServicePartitionKind: "Int64Range",
-				},
-				PartitionStatus:      "Ready",
-				ServiceKind:          "Stateless",
-				TargetReplicaSetSize: 1,
-			},
-		},
-	}
-	instances := &sf.InstanceItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.InstanceItem{
-			{
-				ReplicaItemBase: &sf.ReplicaItemBase{
-					Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
-					HealthState:                  "Ok",
-					LastInBuildDurationInSeconds: "3",
-					NodeName:                     "_Node_0",
-					ReplicaStatus:                "Ready",
-					ServiceKind:                  "Stateless",
-				},
-				ID: "131497042182378182",
-			},
-		},
-	}
+	},
+}
 
-	labels := map[string]string{
-		"expose":                      "true",
-		"frontend.rule.default":       "Path: /",
-		"backend.loadbalancer.method": "wrr",
-		"backend.circuitbreaker":      "NetworkErrorRatio() > 0.5",
-	}
+var partitions = &sf.PartitionItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.PartitionItem{
+		{
+			CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+				ConfigurationVersion: "12884901891",
+				DataLossVersion:      "131496928071680379",
+			},
+			HealthState:       "Ok",
+			MinReplicaSetSize: 1,
+			PartitionInformation: sf.PartitionInformation{
+				HighKey:              "9223372036854775807",
+				ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+				LowKey:               "-9223372036854775808",
+				ServicePartitionKind: "Int64Range",
+			},
+			PartitionStatus:      "Ready",
+			ServiceKind:          "Stateless",
+			TargetReplicaSetSize: 1,
+		},
+	},
+}
+var instances = &sf.InstanceItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.InstanceItem{
+		{
+			ReplicaItemBase: &sf.ReplicaItemBase{
+				Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
+				HealthState:                  "Ok",
+				LastInBuildDurationInSeconds: "3",
+				NodeName:                     "_Node_0",
+				ReplicaStatus:                "Ready",
+				ServiceKind:                  "Stateless",
+			},
+			ID: "131497042182378182",
+		},
+	},
+}
+
+var labels = map[string]string{
+	label.SuffixEnable:            "true",
+	"frontend.rule.default":       "Path: /",
+	"backend.loadbalancer.method": "wrr",
+	"backend.circuitbreaker":      "NetworkErrorRatio() > 0.5",
+}
+
+func TestUpdateConfig(t *testing.T) {
 
 	client := &clientMock{
 		applications: apps,
@@ -103,7 +106,7 @@ func TestUpdateConfig(t *testing.T) {
 		ProviderName: "servicefabric",
 		Configuration: &types.Configuration{
 			Frontends: map[string]*types.Frontend{
-				"fabric:/TestApplication/TestService": {
+				"frontend-fabric:/TestApplication/TestService": {
 					EntryPoints: []string{},
 					Backend:     "fabric:/TestApplication/TestService",
 					Routes: map[string]types.Route{
@@ -159,6 +162,112 @@ func TestUpdateConfig(t *testing.T) {
 		}
 	case <-timeout:
 		t.Error("Provider failed to return configuration")
+	}
+}
+
+func TestFrontendLabelConfig(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		validate func(types.Frontend) bool
+	}{
+		{
+			desc: "Has passTLSCert enabled",
+			labels: map[string]string{
+				label.SuffixEnable:              "true",
+				label.SuffixFrontendPassTLSCert: "true",
+			},
+			validate: func(f types.Frontend) bool { return f.PassTLSCert },
+		},
+		{
+			desc: "Has passTLSCert disabled",
+			labels: map[string]string{
+				label.SuffixEnable:              "true",
+				label.SuffixFrontendPassTLSCert: "false",
+			},
+			validate: func(f types.Frontend) bool { return !f.PassTLSCert },
+		},
+		{
+			desc: "Has FrameDeny enabled",
+			labels: map[string]string{
+				label.SuffixEnable:                   "true",
+				label.SuffixFrontendHeadersFrameDeny: "true",
+			},
+			validate: func(f types.Frontend) bool { return f.Headers.FrameDeny },
+		},
+		{
+			desc: "Has FrameDeny disabled",
+			labels: map[string]string{
+				label.SuffixEnable:                   "true",
+				label.SuffixFrontendHeadersFrameDeny: "false",
+			},
+			validate: func(f types.Frontend) bool { return !f.Headers.FrameDeny },
+		},
+		{
+			desc: "Has RequestHeaders set",
+			labels: map[string]string{
+				label.SuffixEnable:                 "true",
+				label.SuffixFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.Headers.CustomRequestHeaders) == 2 && f.Headers.CustomRequestHeaders["X-Testing"] == "testing"
+			},
+		},
+	}
+
+	provider := Provider{}
+	ctx := context.Background()
+	pool := safe.NewPool(ctx)
+	defer pool.Stop()
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			client := &clientMock{
+				applications: apps,
+				services:     services,
+				partitions:   partitions,
+				replicas:     nil,
+				instances:    instances,
+				labels:       test.labels,
+			}
+			configurationChan := make(chan types.ConfigMessage)
+			err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			timeout := make(chan string, 1)
+			go func() {
+				time.Sleep(time.Second * 2)
+				timeout <- "Timeout triggered"
+			}()
+
+			select {
+			case <-timeout:
+				t.Error("Provider failed to return configuration")
+			case actual := <-configurationChan:
+				if len(actual.Configuration.Frontends) != 1 {
+					t.Error("No frontends present in the config")
+				}
+
+				for _, frontend := range actual.Configuration.Frontends {
+					if frontend == nil {
+						t.Error("Frontend is nil")
+					}
+					if !test.validate(*frontend) {
+						frontendJSON, _ := getJSON(frontend)
+						t.Log(frontendJSON)
+						t.Fail()
+					}
+					break
+
+				}
+			}
+		})
 	}
 }
 
@@ -316,6 +425,14 @@ func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	}
 }
 
+func getJSON(i interface{}) (string, error) {
+	jsonBytes, err := json.Marshal(i)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
+}
+
 func compareConfigurations(actual, expected types.ConfigMessage) error {
 	if actual.ProviderName == expected.ProviderName {
 		if len(actual.Configuration.Frontends) == len(expected.Configuration.Frontends) {
@@ -333,7 +450,7 @@ func compareConfigurations(actual, expected types.ConfigMessage) error {
 				expectedFrontendsStr := string(expectedFrontends)
 
 				if actualFrontendsStr != expectedFrontendsStr {
-					return fmt.Errorf("backend configuration differs from expected configuration: got %q, want %q", actualFrontendsStr, expectedFrontendsStr)
+					return fmt.Errorf("backend configuration differs from expected configuration: got %q, expected %q", actualFrontendsStr, expectedFrontendsStr)
 				}
 
 				actualBackends, err := json.Marshal(actual.Configuration.Backends)
@@ -352,9 +469,9 @@ func compareConfigurations(actual, expected types.ConfigMessage) error {
 				}
 				return nil
 			}
-			return fmt.Errorf("backends count differs from expected: got %+v, want %+v", actual.Configuration.Backends, expected.Configuration.Backends)
+			return fmt.Errorf("backends count differs from expected: got %+v, expected %+v", actual.Configuration.Backends, expected.Configuration.Backends)
 		}
-		return fmt.Errorf("frontends count differs from expected: got %+v, want %+v", actual.Configuration.Frontends, expected.Configuration.Frontends)
+		return fmt.Errorf("frontends count differs from expected: got %+v, expected %+v", actual.Configuration.Frontends, expected.Configuration.Frontends)
 	}
-	return fmt.Errorf("provider name differs from expected: got %q, want %q", actual.ProviderName, expected.ProviderName)
+	return fmt.Errorf("provider name differs from expected: got %q, expected %q", actual.ProviderName, expected.ProviderName)
 }
