@@ -16,8 +16,9 @@ const tmpl = `
       {{end}}
     {{end}}
   {{range $service := .Services}}
+  {{if isEnabled $service}}
     {{range $partition := $service.Partitions}}
-      {{if eq $partition.ServiceKind "Stateless"}}
+      {{if eq $partition.ServiceKind "Stateless"}} 
       [backends."{{$service.Name}}"]
         [backends."{{$service.Name}}".LoadBalancer]
         {{if hasLabel $service "backend.loadbalancer.method"}}
@@ -73,6 +74,7 @@ const tmpl = `
         {{end}}
       {{end}}
     {{end}}
+  {{end}}
 {{end}}
 
 [frontends]
@@ -91,15 +93,18 @@ const tmpl = `
     {{end}}
 {{end}}
 {{range $service := .Services}}
-  {{if isExposed $service}}
+  {{if isEnabled $service}}
+    {{$frontend := $service.Name}}
     {{if eq $service.ServiceKind "Stateless"}}
-
-    [frontends."{{$service.Name}}"]
+    
+    [frontends."frontend-{{$frontend}}"]
     backend = "{{$service.Name}}"
 
     {{if hasLabel $service "frontend.passHostHeader"}}
       passHostHeader = {{getLabelValue $service "frontend.passHostHeader"  ""}}
     {{end}}
+
+    passTLSCert = {{getPassTLSCert $service}}
 
     {{if hasLabel $service "frontend.whitelistSourceRange"}}
       whitelistSourceRange = {{getLabelValue $service "frontend.whitelistSourceRange"  ""}}
@@ -116,9 +121,21 @@ const tmpl = `
     {{if hasLabel $service "frontend.entryPoints"}}
       entryPoints = {{getLabelValue $service "frontend.entryPoints" ""}}
     {{end}}
+    
+    [frontends."frontend-{{$frontend}}".headers]
+    {{if hasFrameDenyHeaders $service}}
+    FrameDeny = {{getFrameDenyHeaders $service}}
+    {{end}}
+
+    {{if hasRequestHeaders $service}}
+      [frontends."frontend-{{$frontend}}".headers.customrequestheaders]
+      {{range $k, $v := getRequestHeaders $service}}
+      {{$k}} = "{{$v}}"
+      {{end}}
+    {{end}}
 
     {{range $key, $value := getLabelsWithPrefix $service "frontend.rule"}}
-    [frontends."{{$service.Name}}".routes."{{$key}}"]
+    [frontends."frontend-{{$frontend}}".routes."{{$key}}"]
     rule = "{{$value}}"
     {{end}}
 

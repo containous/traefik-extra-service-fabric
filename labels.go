@@ -12,12 +12,36 @@ func getFuncBoolLabel(labelName string, defaultValue bool) func(service ServiceI
 	}
 }
 
-func getFuncServiceStringLabel(service ServiceItemExtended, labelName string, defaultValue string) string {
+func getServiceStringLabel(service ServiceItemExtended, labelName string, defaultValue string) string {
 	return label.GetStringValue(service.Labels, labelName, defaultValue)
 }
 
-func hasFuncService(service ServiceItemExtended, labelName string) bool {
+// Example how I will name funcs as I add them
+// func getFuncServiceStringLabel(labelName string, defaultValue string) func(service ServiceItemExtended) string {
+// 	return func(service ServiceItemExtended) string {
+// 		return label.GetStringValue(service.Labels, labelName, defaultValue)
+// 	}
+// }
+// func getFuncServiceSliceStringLabel(labelName string) func(service ServiceItemExtended) []string {
+// 	return func(service ServiceItemExtended) []string {
+// 		return label.GetSliceStringValue(service.Labels, labelName)
+// 	}
+// }
+
+func hasService(service ServiceItemExtended, labelName string) bool {
 	return label.Has(service.Labels, labelName)
+}
+
+func hasFuncService(labelName string) func(service ServiceItemExtended) bool {
+	return func(service ServiceItemExtended) bool {
+		return label.Has(service.Labels, labelName)
+	}
+}
+
+func getFuncServiceMapLabel(labelName string) func(service ServiceItemExtended) map[string]string {
+	return func(service ServiceItemExtended) map[string]string {
+		return label.GetMapValue(service.Labels, labelName)
+	}
 }
 
 func getServiceLabelsWithPrefix(service ServiceItemExtended, prefix string) map[string]string {
