@@ -3,7 +3,6 @@ package servicefabric
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -82,16 +81,26 @@ var instances = &sf.InstanceItemsPage{
 			},
 			ID: "131497042182378182",
 		},
+		{ //Include a failed service in test data
+			ReplicaItemBase: &sf.ReplicaItemBase{
+				Address:                      `{"Endpoints":{"":"http://anotheraddress:8081"}}`,
+				HealthState:                  "Error",
+				LastInBuildDurationInSeconds: "3",
+				NodeName:                     "_Node_0",
+				ReplicaStatus:                "Down", // status is currently down.
+				ServiceKind:                  "Stateless",
+			},
+			ID: "131497042182378183",
+		},
 	},
 }
 
 var labels = map[string]string{
-	label.SuffixEnable:            "true",
-	"frontend.rule.default":       "Path: /",
-	"backend.loadbalancer.method": "wrr",
-	"backend.circuitbreaker":      "NetworkErrorRatio() > 0.5",
+	label.SuffixEnable: "true",
 }
 
+// TestUpdateconfig - This test ensures the provider returns a configuration message to
+// the configuration channel when run.
 func TestUpdateConfig(t *testing.T) {
 
 	client := &clientMock{
@@ -101,38 +110,6 @@ func TestUpdateConfig(t *testing.T) {
 		replicas:     nil,
 		instances:    instances,
 		labels:       labels,
-	}
-	expected := types.ConfigMessage{
-		ProviderName: "servicefabric",
-		Configuration: &types.Configuration{
-			Frontends: map[string]*types.Frontend{
-				"frontend-fabric:/TestApplication/TestService": {
-					EntryPoints: []string{},
-					Backend:     "fabric:/TestApplication/TestService",
-					Routes: map[string]types.Route{
-						"frontend.rule.default": {
-							Rule: "Path: /",
-						},
-					},
-				},
-			},
-			Backends: map[string]*types.Backend{
-				"fabric:/TestApplication/TestService": {
-					LoadBalancer: &types.LoadBalancer{
-						Method: "wrr",
-					},
-					CircuitBreaker: &types.CircuitBreaker{
-						Expression: "NetworkErrorRatio() > 0.5",
-					},
-					Servers: map[string]types.Server{
-						"131497042182378182": {
-							URL:    "http://localhost:8081",
-							Weight: 1,
-						},
-					},
-				},
-			},
-		},
 	}
 
 	provider := Provider{}
@@ -153,15 +130,74 @@ func TestUpdateConfig(t *testing.T) {
 	}()
 
 	select {
-	case actual := <-configurationChan:
-		err := compareConfigurations(actual, expected)
-		if err != nil {
-			res, _ := json.Marshal(actual)
-			t.Log(string(res))
-			t.Error(err)
-		}
+	case <-configurationChan:
+		t.Log("Received configuration object")
 	case <-timeout:
 		t.Error("Provider failed to return configuration")
+	}
+}
+
+// TestServicesPresentInConfig tests that the basic services provide by SF
+// are return in the configuration object
+func TestServicesPresentInConfig(t *testing.T) {
+	provider := Provider{}
+	client := &clientMock{
+		applications: apps,
+		services:     services,
+		partitions:   partitions,
+		replicas:     nil,
+		instances:    instances,
+		labels:       labels,
+	}
+	config, err := provider.buildConfiguration(client)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	testCases := []struct {
+		desc  string
+		check func(types.Configuration) bool
+	}{
+		{
+			desc:  "Has 1 Frontend",
+			check: func(c types.Configuration) bool { return len(c.Frontends) == 1 },
+		},
+		{
+			desc:  "Has 1 backend",
+			check: func(c types.Configuration) bool { return len(c.Backends) == 1 },
+		},
+		{
+			desc: "Backend for 'fabric:/TestApplication/TestService' exists",
+			check: func(c types.Configuration) bool {
+				_, exists := config.Backends["fabric:/TestApplication/TestService"]
+				return exists
+			},
+		},
+		{
+			desc: "Backend has 1 server",
+			check: func(c types.Configuration) bool {
+				backend := config.Backends["fabric:/TestApplication/TestService"]
+				return len(backend.Servers) == 1
+			},
+		},
+		{
+			desc: "Backend server has url 'http://localhost:8081'",
+			check: func(c types.Configuration) bool {
+				backend := config.Backends["fabric:/TestApplication/TestService"]
+				return backend.Servers["131497042182378182"].URL == "http://localhost:8081"
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			if !test.check(*config) {
+				t.Errorf("Check failed: %v", getJSON(config))
+			}
+		})
 	}
 }
 
@@ -243,8 +279,67 @@ func TestFrontendLabelConfig(t *testing.T) {
 					t.Error("Frontend is nil")
 				}
 				if !test.validate(*frontend) {
-					frontendJSON, _ := getJSON(frontend)
-					t.Log(frontendJSON)
+					t.Log(getJSON(frontend))
+					t.Fail()
+				}
+			}
+		})
+	}
+}
+
+func TestBackendLabelConfig(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		validate func(types.Backend) bool
+	}{
+		{
+			desc: "Has DRR Loadbalencer",
+			labels: map[string]string{
+				label.SuffixEnable:                    "true",
+				label.SuffixBackendLoadBalancerMethod: "drr",
+			},
+			validate: func(d types.Backend) bool { return d.LoadBalancer.Method == "drr" },
+		},
+		{
+			desc: "Has circuit breaker set",
+			labels: map[string]string{
+				label.SuffixEnable:                "true",
+				label.SuffixBackendCircuitBreaker: "NetworkErrorRatio() > 0.5",
+			},
+			validate: func(d types.Backend) bool { return d.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5" },
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			provider := Provider{}
+			client := &clientMock{
+				applications: apps,
+				services:     services,
+				partitions:   partitions,
+				replicas:     nil,
+				instances:    instances,
+				labels:       test.labels,
+			}
+			config, err := provider.buildConfiguration(client)
+
+			if err != nil {
+				t.Error(err)
+			}
+
+			if len(config.Backends) != 1 {
+				t.Error("No backends present in the config")
+			}
+
+			for _, backend := range config.Backends {
+				if backend == nil {
+					t.Error("backend is nil")
+				}
+				if !test.validate(*backend) {
+					t.Log(getJSON(backend))
 					t.Fail()
 				}
 			}
@@ -406,53 +501,10 @@ func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	}
 }
 
-func getJSON(i interface{}) (string, error) {
+func getJSON(i interface{}) string {
 	jsonBytes, err := json.Marshal(i)
 	if err != nil {
-		return "", err
+		panic(err)
 	}
-	return string(jsonBytes), nil
-}
-
-func compareConfigurations(actual, expected types.ConfigMessage) error {
-	if actual.ProviderName == expected.ProviderName {
-		if len(actual.Configuration.Frontends) == len(expected.Configuration.Frontends) {
-			if len(actual.Configuration.Backends) == len(expected.Configuration.Backends) {
-				actualFrontends, err := json.Marshal(actual.Configuration.Frontends)
-				if err != nil {
-					return err
-				}
-				actualFrontendsStr := string(actualFrontends)
-
-				expectedFrontends, err := json.Marshal(expected.Configuration.Frontends)
-				if err != nil {
-					return err
-				}
-				expectedFrontendsStr := string(expectedFrontends)
-
-				if actualFrontendsStr != expectedFrontendsStr {
-					return fmt.Errorf("backend configuration differs from expected configuration: got %q, expected %q", actualFrontendsStr, expectedFrontendsStr)
-				}
-
-				actualBackends, err := json.Marshal(actual.Configuration.Backends)
-				if err != nil {
-					return err
-				}
-				actualBackendsStr := string(actualBackends)
-				expectedBackends, err := json.Marshal(expected.Configuration.Backends)
-				if err != nil {
-					return err
-				}
-				expectedBackendsStr := string(expectedBackends)
-
-				if actualBackendsStr != expectedBackendsStr {
-					return err
-				}
-				return nil
-			}
-			return fmt.Errorf("backends count differs from expected: got %+v, expected %+v", actual.Configuration.Backends, expected.Configuration.Backends)
-		}
-		return fmt.Errorf("frontends count differs from expected: got %+v, expected %+v", actual.Configuration.Frontends, expected.Configuration.Frontends)
-	}
-	return fmt.Errorf("provider name differs from expected: got %q, expected %q", actual.ProviderName, expected.ProviderName)
+	return string(jsonBytes)
 }
