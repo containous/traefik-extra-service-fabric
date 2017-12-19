@@ -27,9 +27,9 @@ const tmpl = `
           method = "drr"
         {{end}}
 
-        {{if hasLabel $service "backend.healthcheck"}}
+        {{if hasLabel $service "backend.healthcheck.path"}}
           [backends."{{$service.Name}}".healthcheck]
-          path = "{{getLabelValue $service "backend.healthcheck" ""}}"
+          path = "{{getLabelValue $service "backend.healthcheck.path" ""}}"
           interval = "{{getLabelValue $service "backend.healthcheck.interval" "10s"}}"
         {{end}}
 
@@ -114,8 +114,8 @@ const tmpl = `
       priority = {{getLabelValue $service "frontend.priority" ""}}
     {{end}}
 
-    {{if hasLabel $service "frontend.basicAuth"}}
-      basicAuth = {{getLabelValue $service "frontend.basicAuth" ""}}
+    {{if hasLabel $service "frontend.auth.basic"}}
+      basicAuth = {{getLabelValue $service "frontend.auth.basic" ""}}
     {{end}}
 
     {{if hasLabel $service "frontend.entryPoints"}}
