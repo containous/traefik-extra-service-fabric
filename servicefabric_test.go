@@ -208,6 +208,60 @@ func TestFrontendLabelConfig(t *testing.T) {
 		validate func(types.Frontend) bool
 	}{
 		{
+			desc: "Has passHostHeader enabled",
+			labels: map[string]string{
+				label.SuffixEnable:                 "true",
+				label.SuffixFrontendPassHostHeader: "true",
+			},
+			validate: func(f types.Frontend) bool { return f.PassHostHeader },
+		},
+		{
+			desc: "Has passHostHeader disabled",
+			labels: map[string]string{
+				label.SuffixEnable:                 "true",
+				label.SuffixFrontendPassHostHeader: "false",
+			},
+			validate: func(f types.Frontend) bool { return !f.PassHostHeader },
+		},
+		{
+			desc: "Has whitelistSourceRange set",
+			labels: map[string]string{
+				label.SuffixEnable:                       "true",
+				label.SuffixFrontendWhitelistSourceRange: "[\"10.0.0.1\", \"10.0.0.2\"]",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.WhitelistSourceRange[0] == "10.0.0.1" && f.WhitelistSourceRange[1] == "10.0.0.2"
+			},
+		},
+		{
+			desc: "Has priority set",
+			labels: map[string]string{
+				label.SuffixEnable:           "true",
+				label.SuffixFrontendPriority: "13",
+			},
+			validate: func(f types.Frontend) bool { return f.Priority == 13 },
+		},
+		{
+			desc: "Has basicAuth set",
+			labels: map[string]string{
+				label.SuffixEnable:            "true",
+				label.SuffixFrontendAuthBasic: "[\"USER:HASH\"]",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.BasicAuth) == 1 && f.BasicAuth[0] == "USER:HASH"
+			},
+		},
+		{
+			desc: "Has entrypoints set",
+			labels: map[string]string{
+				label.SuffixEnable:              "true",
+				label.SuffixFrontendEntryPoints: "[\"Barry\", \"Bob\"]",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.EntryPoints) == 2 && f.EntryPoints[0] == "Barry" && f.EntryPoints[1] == "Bob"
+			},
+		},
+		{
 			desc: "Has passTLSCert enabled",
 			labels: map[string]string{
 				label.SuffixEnable:              "true",
@@ -249,6 +303,16 @@ func TestFrontendLabelConfig(t *testing.T) {
 				return len(f.Headers.CustomRequestHeaders) == 2 && f.Headers.CustomRequestHeaders["X-Testing"] == "testing"
 			},
 		},
+		{
+			desc: "Has rule set",
+			labels: map[string]string{
+				label.SuffixEnable:                    "true",
+				label.SuffixFrontendRule + ".default": "Path: /",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.Routes) == 1 && f.Routes["frontend.rule.default"].Rule == "Path: /"
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -268,9 +332,10 @@ func TestFrontendLabelConfig(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
-			if len(config.Frontends) != 1 {
+			if config.Frontends == nil || len(config.Frontends) != 1 {
 				t.Error("No frontends present in the config")
 			}
 
@@ -299,7 +364,18 @@ func TestBackendLabelConfig(t *testing.T) {
 				label.SuffixEnable:                    "true",
 				label.SuffixBackendLoadBalancerMethod: "drr",
 			},
-			validate: func(d types.Backend) bool { return d.LoadBalancer.Method == "drr" },
+			validate: func(b types.Backend) bool { return b.LoadBalancer.Method == "drr" },
+		},
+		{
+			desc: "Has healthcheck set",
+			labels: map[string]string{
+				label.SuffixEnable:                     "true",
+				label.SuffixBackendHealthCheckPath:     "/hc",
+				label.SuffixBackendHealthCheckInterval: "1337s",
+			},
+			validate: func(b types.Backend) bool {
+				return b.HealthCheck.Path == "/hc" && b.HealthCheck.Interval == "1337s"
+			},
 		},
 		{
 			desc: "Has circuit breaker set",
@@ -307,7 +383,37 @@ func TestBackendLabelConfig(t *testing.T) {
 				label.SuffixEnable:                "true",
 				label.SuffixBackendCircuitBreaker: "NetworkErrorRatio() > 0.5",
 			},
-			validate: func(d types.Backend) bool { return d.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5" },
+			validate: func(b types.Backend) bool { return b.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5" },
+		},
+		// {
+		// 	desc: "Has stickiness loadbalencer set with cookie name",
+		// 	labels: map[string]string{
+		// 		label.SuffixEnable:                                  "true",
+		// 		label.SuffixBackendLoadBalancerStickiness:           "true",
+		// 		label.SuffixBackendLoadBalancerStickinessCookieName: "stickycookie",
+		// 	},
+		// 	validate: func(b types.Backend) bool {
+		// 		return b.LoadBalancer.Stickiness != nil && b.LoadBalancer.Stickiness.CookieName == "stickycookie"
+		// 	},
+		// },
+		{
+			desc: "Has stickiness cookie set",
+			labels: map[string]string{
+				label.SuffixEnable:                        "true",
+				label.SuffixBackendLoadBalancerStickiness: "true",
+			},
+			validate: func(b types.Backend) bool { return b.LoadBalancer.Stickiness != nil },
+		},
+		{
+			desc: "Has maxconn amount and extractor func",
+			labels: map[string]string{
+				label.SuffixEnable:                      "true",
+				label.SuffixBackendMaxConnAmount:        "1337",
+				label.SuffixBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
+			},
+			validate: func(b types.Backend) bool {
+				return b.MaxConn.Amount == 1337 && b.MaxConn.ExtractorFunc == "request.header.TEST_HEADER"
+			},
 		},
 	}
 
