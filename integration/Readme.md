@@ -16,7 +16,7 @@ Provide a quick and easy way to test Traefik Provider against a Service Fabric c
 ## Usage
 
 > Prerequisites:
-> All scripts expect to be executed in the `integrationtesting` folder. 
+> All scripts expect to be executed in the `integration` folder. 
 > You need to add the additional docker daemon config to run SF in a container. See [details here.](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started-mac#create-a-local-container-and-set-up-service-fabric)
 
 Full build: Run `build.sh` to create docker images then run `run.sh` to start a cluster
