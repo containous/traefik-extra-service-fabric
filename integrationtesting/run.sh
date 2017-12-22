@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "!WARNING: Containerized clusters require IPV6 enabled. Without updating your docker settings this will fail"
+echo "see https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started-mac for details"
+
 function isClusterHealthy () {
     echo "Checking cluster status..."
     HEALTHURL="http://localhost:19080/$/GetClusterHealth?NodesHealthStateFilter=1&ApplicationsHealthStateFilter=1&EventsHealthStateFilter=1&api-version=3.0"
@@ -31,5 +34,5 @@ do
 done
 
 echo "######## Deploying sample node apps to cluster ###########"
-docker run --name appinstaller -it --rm --network=host -v ${PWD}:/src lawrencegripper/sfctl -f ./sf-createapps.sh
+docker run --name appinstaller -it --rm --network=host -v ${PWD}:/src lawrencegripper/sfctl -f ./uploadtestapp.sh
 
