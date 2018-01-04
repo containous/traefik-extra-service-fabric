@@ -83,9 +83,7 @@ const tmpl = `
     [frontends."{{$groupName}}"]
     backend = "{{$groupName}}"
 
-    {{if hasLabel $service "frontend.priority"}}
-    priority = 100
-    {{end}}
+    priority = {{ getPriority $service }}
 
     {{range $key, $value := getLabelsWithPrefix $service "frontend.rule"}}
     [frontends."{{$groupName}}".routes."{{$key}}"]
@@ -100,9 +98,7 @@ const tmpl = `
     [frontends."frontend-{{$frontend}}"]
     backend = "{{$service.Name}}"
 
-    {{if hasLabel $service "frontend.passHostHeader"}}
-      passHostHeader = {{getLabelValue $service "frontend.passHostHeader"  ""}}
-    {{end}}
+    passHostHeader = {{getPassHostHeader $service }}
 
     passTLSCert = {{getPassTLSCert $service}}
 
@@ -110,16 +106,16 @@ const tmpl = `
       whitelistSourceRange = {{getLabelValue $service "frontend.whitelistSourceRange"  ""}}
     {{end}}
 
-    {{if hasLabel $service "frontend.priority"}}
-      priority = {{getLabelValue $service "frontend.priority" ""}}
-    {{end}}
+    priority = {{ getPriority $service }}
 
     {{if hasLabel $service "frontend.auth.basic"}}
       basicAuth = {{getLabelValue $service "frontend.auth.basic" ""}}
     {{end}}
 
-    {{if hasLabel $service "frontend.entryPoints"}}
-      entryPoints = {{getLabelValue $service "frontend.entryPoints" ""}}
+    {{if hasEntryPoints $service}}
+    entryPoints = [{{range getEntryPoints $service}}
+    "{{.}}",
+    {{end}}]
     {{end}}
     
     [frontends."frontend-{{$frontend}}".headers]
