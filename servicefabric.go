@@ -5,14 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/cenk/backoff"
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/provider"
-	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
@@ -92,42 +90,6 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 		}
 	})
 	return nil
-}
-
-func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, error) {
-	var sfFuncMap = template.FuncMap{
-		"getServices":                getServices,
-		"hasLabel":                   hasService,
-		"getLabelValue":              getServiceStringLabel,
-		"getLabelsWithPrefix":        getServiceLabelsWithPrefix,
-		"isPrimary":                  isPrimary,
-		"isEnabled":                  getFuncBoolLabel(label.SuffixEnable, false),
-		"getBackendName":             getBackendName,
-		"getDefaultEndpoint":         getDefaultEndpoint,
-		"getNamedEndpoint":           getNamedEndpoint,           // FIXME unused
-		"getApplicationParameter":    getApplicationParameter,    // FIXME unused
-		"doesAppParamContain":        doesAppParamContain,        // FIXME unused
-		"filterServicesByLabelValue": filterServicesByLabelValue, // FIXME unused
-
-		"getPassTLSCert":      getFuncBoolLabel(label.SuffixFrontendPassTLSCert, false),
-		"hasRequestHeaders":   hasFuncService(label.SuffixFrontendRequestHeaders),
-		"getRequestHeaders":   getFuncServiceMapLabel(label.SuffixFrontendRequestHeaders),
-		"hasFrameDenyHeaders": hasFuncService(label.SuffixFrontendHeadersFrameDeny),
-		"getFrameDenyHeaders": getFuncBoolLabel(label.SuffixFrontendHeadersFrameDeny, false),
-	}
-
-	services, err := getClusterServices(sfClient)
-	if err != nil {
-		return nil, err
-	}
-
-	templateObjects := struct {
-		Services []ServiceItemExtended
-	}{
-		Services: services,
-	}
-
-	return p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
 }
 
 func getDefaultEndpoint(instance replicaInstance) string {
@@ -217,7 +179,7 @@ func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
 				Application: app,
 			}
 
-			if labels, err := sfClient.GetServiceLabels(&service, &app, traefikLabelPrefix); err != nil {
+			if labels, err := sfClient.GetServiceLabels(&service, &app, ""); err != nil {
 				log.Error(err)
 			} else {
 				item.Labels = labels

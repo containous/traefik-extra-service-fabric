@@ -3,6 +3,7 @@ package servicefabric
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -96,7 +97,7 @@ var instances = &sf.InstanceItemsPage{
 }
 
 var labels = map[string]string{
-	label.SuffixEnable: "true",
+	label.TraefikEnable: "true",
 }
 
 // TestUpdateconfig - This test ensures the provider returns a configuration message to
@@ -137,6 +138,20 @@ func TestUpdateConfig(t *testing.T) {
 	}
 }
 
+func requestConfig(provider Provider, client *clientMock) (types.Configuration, error) {
+	config, err := provider.buildConfiguration(client)
+
+	if err != nil {
+		return types.Configuration{}, err
+	}
+
+	if config == nil {
+		return types.Configuration{}, errors.New("Returned nil config")
+	}
+
+	return *config, nil
+}
+
 // TestServicesPresentInConfig tests that the basic services provide by SF
 // are return in the configuration object
 func TestServicesPresentInConfig(t *testing.T) {
@@ -149,8 +164,8 @@ func TestServicesPresentInConfig(t *testing.T) {
 		instances:    instances,
 		labels:       labels,
 	}
-	config, err := provider.buildConfiguration(client)
 
+	config, err := requestConfig(provider, client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -194,7 +209,7 @@ func TestServicesPresentInConfig(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			if !test.check(*config) {
+			if !test.check(config) {
 				t.Errorf("Check failed: %v", getJSON(config))
 			}
 		})
@@ -210,42 +225,45 @@ func TestFrontendLabelConfig(t *testing.T) {
 		{
 			desc: "Has passHostHeader enabled",
 			labels: map[string]string{
-				label.SuffixEnable:                 "true",
-				label.SuffixFrontendPassHostHeader: "true",
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendPassHostHeader: "true",
 			},
 			validate: func(f types.Frontend) bool { return f.PassHostHeader },
 		},
 		{
 			desc: "Has passHostHeader disabled",
 			labels: map[string]string{
-				label.SuffixEnable:                 "true",
-				label.SuffixFrontendPassHostHeader: "false",
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendPassHostHeader: "false",
 			},
 			validate: func(f types.Frontend) bool { return !f.PassHostHeader },
 		},
 		{
 			desc: "Has whitelistSourceRange set",
 			labels: map[string]string{
-				label.SuffixEnable:                       "true",
-				label.SuffixFrontendWhitelistSourceRange: "[\"10.0.0.1\", \"10.0.0.2\"]",
+				label.TraefikEnable:                       "true",
+				label.TraefikFrontendWhitelistSourceRange: "[\"10.0.0.1\", \"10.0.0.2\"]",
 			},
 			validate: func(f types.Frontend) bool {
+				if len(f.WhitelistSourceRange) != 2 {
+					return false
+				}
 				return f.WhitelistSourceRange[0] == "10.0.0.1" && f.WhitelistSourceRange[1] == "10.0.0.2"
 			},
 		},
 		{
 			desc: "Has priority set",
 			labels: map[string]string{
-				label.SuffixEnable:           "true",
-				label.SuffixFrontendPriority: "13",
+				label.TraefikEnable:           "true",
+				label.TraefikFrontendPriority: "13",
 			},
 			validate: func(f types.Frontend) bool { return f.Priority == 13 },
 		},
 		{
 			desc: "Has basicAuth set",
 			labels: map[string]string{
-				label.SuffixEnable:            "true",
-				label.SuffixFrontendAuthBasic: "[\"USER:HASH\"]",
+				label.TraefikEnable:            "true",
+				label.TraefikFrontendAuthBasic: "[\"USER:HASH\"]",
 			},
 			validate: func(f types.Frontend) bool {
 				return len(f.BasicAuth) == 1 && f.BasicAuth[0] == "USER:HASH"
@@ -254,8 +272,8 @@ func TestFrontendLabelConfig(t *testing.T) {
 		{
 			desc: "Has entrypoints set",
 			labels: map[string]string{
-				label.SuffixEnable:              "true",
-				label.SuffixFrontendEntryPoints: "[\"Barry\", \"Bob\"]",
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendEntryPoints: "Barry, Bob",
 			},
 			validate: func(f types.Frontend) bool {
 				return len(f.EntryPoints) == 2 && f.EntryPoints[0] == "Barry" && f.EntryPoints[1] == "Bob"
@@ -264,40 +282,40 @@ func TestFrontendLabelConfig(t *testing.T) {
 		{
 			desc: "Has passTLSCert enabled",
 			labels: map[string]string{
-				label.SuffixEnable:              "true",
-				label.SuffixFrontendPassTLSCert: "true",
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendPassTLSCert: "true",
 			},
 			validate: func(f types.Frontend) bool { return f.PassTLSCert },
 		},
 		{
 			desc: "Has passTLSCert disabled",
 			labels: map[string]string{
-				label.SuffixEnable:              "true",
-				label.SuffixFrontendPassTLSCert: "false",
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendPassTLSCert: "false",
 			},
 			validate: func(f types.Frontend) bool { return !f.PassTLSCert },
 		},
 		{
 			desc: "Has FrameDeny enabled",
 			labels: map[string]string{
-				label.SuffixEnable:                   "true",
-				label.SuffixFrontendHeadersFrameDeny: "true",
+				label.TraefikEnable:            "true",
+				label.TraefikFrontendFrameDeny: "true",
 			},
 			validate: func(f types.Frontend) bool { return f.Headers.FrameDeny },
 		},
 		{
 			desc: "Has FrameDeny disabled",
 			labels: map[string]string{
-				label.SuffixEnable:                   "true",
-				label.SuffixFrontendHeadersFrameDeny: "false",
+				label.TraefikEnable:            "true",
+				label.TraefikFrontendFrameDeny: "false",
 			},
 			validate: func(f types.Frontend) bool { return !f.Headers.FrameDeny },
 		},
 		{
 			desc: "Has RequestHeaders set",
 			labels: map[string]string{
-				label.SuffixEnable:                 "true",
-				label.SuffixFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
 			validate: func(f types.Frontend) bool {
 				return len(f.Headers.CustomRequestHeaders) == 2 && f.Headers.CustomRequestHeaders["X-Testing"] == "testing"
@@ -306,8 +324,8 @@ func TestFrontendLabelConfig(t *testing.T) {
 		{
 			desc: "Has rule set",
 			labels: map[string]string{
-				label.SuffixEnable:                    "true",
-				label.SuffixFrontendRule + ".default": "Path: /",
+				label.TraefikEnable:                    "true",
+				label.TraefikFrontendRule + ".default": "Path: /",
 			},
 			validate: func(f types.Frontend) bool {
 				return len(f.Routes) == 1 && f.Routes["frontend.rule.default"].Rule == "Path: /"
@@ -328,11 +346,10 @@ func TestFrontendLabelConfig(t *testing.T) {
 				instances:    instances,
 				labels:       test.labels,
 			}
-			config, err := provider.buildConfiguration(client)
 
+			config, err := requestConfig(provider, client)
 			if err != nil {
 				t.Error(err)
-				return
 			}
 
 			if config.Frontends == nil || len(config.Frontends) != 1 {
@@ -361,36 +378,44 @@ func TestBackendLabelConfig(t *testing.T) {
 		{
 			desc: "Has DRR Loadbalencer",
 			labels: map[string]string{
-				label.SuffixEnable:                    "true",
-				label.SuffixBackendLoadBalancerMethod: "drr",
+				label.TraefikEnable:                    "true",
+				label.TraefikBackendLoadBalancerMethod: "drr",
 			},
 			validate: func(b types.Backend) bool { return b.LoadBalancer.Method == "drr" },
 		},
 		{
 			desc: "Has healthcheck set",
 			labels: map[string]string{
-				label.SuffixEnable:                     "true",
-				label.SuffixBackendHealthCheckPath:     "/hc",
-				label.SuffixBackendHealthCheckInterval: "1337s",
+				label.TraefikEnable:                     "true",
+				label.TraefikBackendHealthCheckPath:     "/hc",
+				label.TraefikBackendHealthCheckInterval: "1337s",
 			},
 			validate: func(b types.Backend) bool {
+				if b.HealthCheck == nil {
+					return false
+				}
 				return b.HealthCheck.Path == "/hc" && b.HealthCheck.Interval == "1337s"
 			},
 		},
 		{
 			desc: "Has circuit breaker set",
 			labels: map[string]string{
-				label.SuffixEnable:                "true",
-				label.SuffixBackendCircuitBreaker: "NetworkErrorRatio() > 0.5",
+				label.TraefikEnable:                "true",
+				label.TraefikBackendCircuitBreaker: "NetworkErrorRatio() > 0.5",
 			},
-			validate: func(b types.Backend) bool { return b.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5" },
+			validate: func(b types.Backend) bool {
+				if b.CircuitBreaker == nil {
+					return false
+				}
+				return b.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5"
+			},
 		},
 		// {
 		// 	desc: "Has stickiness loadbalencer set with cookie name",
 		// 	labels: map[string]string{
-		// 		label.SuffixEnable:                                  "true",
-		// 		label.SuffixBackendLoadBalancerStickiness:           "true",
-		// 		label.SuffixBackendLoadBalancerStickinessCookieName: "stickycookie",
+		// 		label.TraefikEnable:                                  "true",
+		// 		label.TraefikBackendLoadBalancerStickiness:           "true",
+		// 		label.TraefikBackendLoadBalancerStickinessCookieName: "stickycookie",
 		// 	},
 		// 	validate: func(b types.Backend) bool {
 		// 		return b.LoadBalancer.Stickiness != nil && b.LoadBalancer.Stickiness.CookieName == "stickycookie"
@@ -399,19 +424,22 @@ func TestBackendLabelConfig(t *testing.T) {
 		{
 			desc: "Has stickiness cookie set",
 			labels: map[string]string{
-				label.SuffixEnable:                        "true",
-				label.SuffixBackendLoadBalancerStickiness: "true",
+				label.TraefikEnable:                        "true",
+				label.TraefikBackendLoadBalancerStickiness: "true",
 			},
 			validate: func(b types.Backend) bool { return b.LoadBalancer.Stickiness != nil },
 		},
 		{
 			desc: "Has maxconn amount and extractor func",
 			labels: map[string]string{
-				label.SuffixEnable:                      "true",
-				label.SuffixBackendMaxConnAmount:        "1337",
-				label.SuffixBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
+				label.TraefikEnable:                      "true",
+				label.TraefikBackendMaxConnAmount:        "1337",
+				label.TraefikBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
 			},
 			validate: func(b types.Backend) bool {
+				if b.MaxConn == nil {
+					return false
+				}
 				return b.MaxConn.Amount == 1337 && b.MaxConn.ExtractorFunc == "request.header.TEST_HEADER"
 			},
 		},
@@ -430,8 +458,10 @@ func TestBackendLabelConfig(t *testing.T) {
 				instances:    instances,
 				labels:       test.labels,
 			}
-			config, err := provider.buildConfiguration(client)
-
+			config, err := requestConfig(provider, client)
+			if err != nil {
+				t.Error(err)
+			}
 			if err != nil {
 				t.Error(err)
 			}
