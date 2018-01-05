@@ -18,8 +18,6 @@ import (
 
 var _ provider.Provider = (*Provider)(nil)
 
-const traefikLabelPrefix = "traefik"
-
 // Provider holds for configuration for the provider
 type Provider struct {
 	provider.BaseProvider `mapstructure:",squash"`

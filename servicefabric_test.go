@@ -216,6 +216,7 @@ func TestServicesPresentInConfig(t *testing.T) {
 	}
 }
 
+// nolint: gocyclo
 func TestFrontendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
@@ -369,6 +370,7 @@ func TestFrontendLabelConfig(t *testing.T) {
 	}
 }
 
+// nolint: gocyclo
 func TestBackendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
