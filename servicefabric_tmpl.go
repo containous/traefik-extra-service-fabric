@@ -1,16 +1,15 @@
 package servicefabric
 
 const tmpl = `
-{{$groupedServiceMap := getServices .Services "backend.group.name"}}
 [backends]
-    {{range $aggName, $aggServices := $groupedServiceMap }}
+    {{range $aggName, $aggServices := getGroupedServices .Services }}
       [backends."{{$aggName}}"]
       {{range $service := $aggServices}}
         {{range $partition := $service.Partitions}}
           {{range $instance := $partition.Instances}}
             [backends."{{$aggName}}".servers."{{$service.ID}}-{{$instance.ID}}"]
             url = "{{getDefaultEndpoint $instance}}"
-            weight = {{getLabelValue $service "backend.group.weight" "1"}}
+            weight = {{getGroupedWeight $service}}
           {{end}}
         {{end}}
       {{end}}
@@ -21,33 +20,36 @@ const tmpl = `
       {{if eq $partition.ServiceKind "Stateless"}} 
       [backends."{{$service.Name}}"]
         [backends."{{$service.Name}}".LoadBalancer]
-        {{if hasLabel $service "backend.loadbalancer.method"}}
-          method = "{{getLabelValue $service "backend.loadbalancer.method" "" }}"
-        {{else}}
-          method = "drr"
+        {{if hasLoadBalancerLabel $service}}
+          method = "{{getLoadBalancerMethod $service }}"
         {{end}}
 
-        {{if hasLabel $service "backend.healthcheck.path"}}
+        {{if hasHealthCheckLabels $service}}
           [backends."{{$service.Name}}".healthcheck]
-          path = "{{getLabelValue $service "backend.healthcheck.path" ""}}"
-          interval = "{{getLabelValue $service "backend.healthcheck.interval" "10s"}}"
+          path = "{{getHealthCheckPath $service}}"
+          interval = "{{getHealthCheckInterval $service }}"
+          port = {{getHealthCheckPort $service}}
         {{end}}
 
-        {{if hasLabel $service "backend.loadbalancer.stickiness"}}
+        {{if hasStickinessLabel $service}}
           [backends."{{$service.Name}}".LoadBalancer.stickiness]
         {{end}}
 
-        {{if hasLabel $service "backend.circuitbreaker"}}
-          [backends."{{$service.Name}}".circuitbreaker]
-          expression = "{{getLabelValue $service "backend.circuitbreaker" ""}}"
+        sticky = {{getSticky $service}}
+        {{if hasStickinessLabel $service}}
+        [backends."{{$service.Name}}".loadBalancer.stickiness]
+          cookieName = "{{getStickinessCookieName $service}}"
         {{end}}
 
-        {{if hasLabel $service "backend.maxconn.amount"}}
-          [backends."{{$service.Name}}".maxconn]
-          amount = {{getLabelValue $service "backend.maxconn.amount" ""}}
-          {{if hasLabel $service "backend.maxconn.extractorfunc"}}
-          extractorfunc = "{{getLabelValue $service "backend.maxconn.extractorfunc" ""}}"
-          {{end}}
+        {{if hasCircuitBreakerLabel $service}}
+        [backends."{{$service.Name}}".circuitBreaker]
+          expression = "{{getCircuitBreakerExpression $service}}"
+        {{end}}
+
+        {{if hasMaxConnLabels $service}}
+        [backends."{{$service.Name}}".maxConn]
+          amount = {{getMaxConnAmount $service}}
+          extractorFunc = "{{getMaxConnExtractorFunc $service}}"
         {{end}}
 
         {{range $instance := $partition.Instances}}
@@ -78,14 +80,14 @@ const tmpl = `
 {{end}}
 
 [frontends]
-{{range $groupName, $groupServices := $groupedServiceMap}}
+{{range $groupName, $groupServices := getGroupedServices .Services}}
   {{$service := index $groupServices 0}}
     [frontends."{{$groupName}}"]
     backend = "{{$groupName}}"
 
-    priority = {{ getPriority $service }}
+    priority = 50
 
-    {{range $key, $value := getLabelsWithPrefix $service "frontend.rule"}}
+    {{range $key, $value := getFrontendRules $service}}
     [frontends."{{$groupName}}".routes."{{$key}}"]
     rule = "{{$value}}"
     {{end}}
@@ -102,14 +104,18 @@ const tmpl = `
 
     passTLSCert = {{getPassTLSCert $service}}
 
-    {{if hasLabel $service "frontend.whitelistSourceRange"}}
-      whitelistSourceRange = {{getLabelValue $service "frontend.whitelistSourceRange"  ""}}
+    {{if getWhitelistSourceRange $service}}
+    whitelistSourceRange = [{{range getWhitelistSourceRange $service}}
+      "{{.}}",
+      {{end}}]
     {{end}}
 
     priority = {{ getPriority $service }}
 
-    {{if hasLabel $service "frontend.auth.basic"}}
-      basicAuth = {{getLabelValue $service "frontend.auth.basic" ""}}
+    {{if hasBasicAuth $service}}
+      basicAuth = [{{range getBasicAuth $service }}
+      "{{.}}",
+      {{end}}]
     {{end}}
 
     {{if hasEntryPoints $service}}
@@ -130,7 +136,7 @@ const tmpl = `
       {{end}}
     {{end}}
 
-    {{range $key, $value := getLabelsWithPrefix $service "frontend.rule"}}
+    {{range $key, $value := getFrontendRules $service}}
     [frontends."frontend-{{$frontend}}".routes."{{$key}}"]
     rule = "{{$value}}"
     {{end}}

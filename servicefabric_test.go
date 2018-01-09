@@ -80,7 +80,7 @@ var instances = &sf.InstanceItemsPage{
 				ReplicaStatus:                "Ready",
 				ServiceKind:                  "Stateless",
 			},
-			ID: "131497042182378182",
+			ID: "1",
 		},
 		{ //Include a failed service in test data
 			ReplicaItemBase: &sf.ReplicaItemBase{
@@ -91,7 +91,7 @@ var instances = &sf.InstanceItemsPage{
 				ReplicaStatus:                "Down", // status is currently down.
 				ServiceKind:                  "Stateless",
 			},
-			ID: "131497042182378183",
+			ID: "2",
 		},
 	},
 }
@@ -200,7 +200,7 @@ func TestServicesPresentInConfig(t *testing.T) {
 			desc: "Backend server has url 'http://localhost:8081'",
 			check: func(c types.Configuration) bool {
 				backend := config.Backends["fabric:/TestApplication/TestService"]
-				return backend.Servers["131497042182378182"].URL == "http://localhost:8081"
+				return backend.Servers["1"].URL == "http://localhost:8081"
 			},
 		},
 	}
@@ -243,7 +243,7 @@ func TestFrontendLabelConfig(t *testing.T) {
 			desc: "Has whitelistSourceRange set",
 			labels: map[string]string{
 				label.TraefikEnable:                       "true",
-				label.TraefikFrontendWhitelistSourceRange: "[\"10.0.0.1\", \"10.0.0.2\"]",
+				label.TraefikFrontendWhitelistSourceRange: "10.0.0.1, 10.0.0.2",
 			},
 			validate: func(f types.Frontend) bool {
 				if len(f.WhitelistSourceRange) != 2 {
@@ -264,10 +264,10 @@ func TestFrontendLabelConfig(t *testing.T) {
 			desc: "Has basicAuth set",
 			labels: map[string]string{
 				label.TraefikEnable:            "true",
-				label.TraefikFrontendAuthBasic: "[\"USER:HASH\"]",
+				label.TraefikFrontendAuthBasic: "USER1:HASH1, USER2:HASH2",
 			},
 			validate: func(f types.Frontend) bool {
-				return len(f.BasicAuth) == 1 && f.BasicAuth[0] == "USER:HASH"
+				return len(f.BasicAuth) == 2 && f.BasicAuth[0] == "USER1:HASH1"
 			},
 		},
 		{
@@ -329,7 +329,7 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendRule + ".default": "Path: /",
 			},
 			validate: func(f types.Frontend) bool {
-				return len(f.Routes) == 1 && f.Routes["frontend.rule.default"].Rule == "Path: /"
+				return len(f.Routes) == 1 && f.Routes[label.TraefikFrontendRule+".default"].Rule == "Path: /"
 			},
 		},
 	}
@@ -390,6 +390,7 @@ func TestBackendLabelConfig(t *testing.T) {
 			labels: map[string]string{
 				label.TraefikEnable:                     "true",
 				label.TraefikBackendHealthCheckPath:     "/hc",
+				label.TraefikBackendHealthCheckPort:     "9000",
 				label.TraefikBackendHealthCheckInterval: "1337s",
 			},
 			validate: func(b types.Backend) bool {
@@ -402,8 +403,8 @@ func TestBackendLabelConfig(t *testing.T) {
 		{
 			desc: "Has circuit breaker set",
 			labels: map[string]string{
-				label.TraefikEnable:                "true",
-				label.TraefikBackendCircuitBreaker: "NetworkErrorRatio() > 0.5",
+				label.TraefikEnable:                          "true",
+				label.TraefikBackendCircuitBreakerExpression: "NetworkErrorRatio() > 0.5",
 			},
 			validate: func(b types.Backend) bool {
 				if b.CircuitBreaker == nil {
@@ -482,6 +483,109 @@ func TestBackendLabelConfig(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGroupedServicesFrontends(t *testing.T) {
+	groupName := "groupedbackends"
+	groupWeight := "154"
+
+	provider := Provider{}
+	client := &clientMock{
+		applications: apps,
+		services:     services,
+		partitions:   partitions,
+		replicas:     nil,
+		instances:    instances,
+		labels: map[string]string{
+			label.TraefikEnable:  "true",
+			TraefikSFGroupName:   groupName,
+			TraefikSFGroupWeight: groupWeight,
+		},
+	}
+	config, err := requestConfig(provider, client)
+	if err != nil {
+		t.Error(err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(config.Frontends) != 2 {
+		t.Log(getJSON(config))
+		t.Log("Incorrect count of frontends present in the config")
+		t.FailNow()
+	}
+
+	if len(config.Backends) != 2 {
+		t.Log(getJSON(config))
+		t.Log("Incorrect count of backends present in the config")
+		t.FailNow()
+	}
+
+	frontend, exists := config.Frontends[groupName]
+
+	if !exists {
+		t.Log(getJSON(config))
+		t.Log("Missing frontend for grouped service")
+		t.FailNow()
+	}
+
+	if frontend.Priority == 50 && frontend.Backend == groupName {
+		t.Log("Frontend exists for group")
+	}
+}
+
+func TestGroupedServicesBackends(t *testing.T) {
+	groupName := "groupedbackends"
+	groupWeight := "154"
+
+	provider := Provider{}
+	client := &clientMock{
+		applications: apps,
+		services:     services,
+		partitions:   partitions,
+		replicas:     nil,
+		instances:    instances,
+		labels: map[string]string{
+			label.TraefikEnable:  "true",
+			TraefikSFGroupName:   groupName,
+			TraefikSFGroupWeight: groupWeight,
+		},
+	}
+	config, err := requestConfig(provider, client)
+	if err != nil {
+		t.Error(err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(config.Backends) != 2 {
+		t.Log(getJSON(config))
+		t.Log("Incorrect count of backends present in the config")
+		t.FailNow()
+	}
+
+	backend, exists := config.Backends[groupName]
+	if !exists {
+		t.Log(getJSON(config))
+		t.Log("Missing backend for grouped service")
+		t.FailNow()
+	}
+
+	if len(backend.Servers) != 1 {
+		t.Log(getJSON(config))
+		t.Log("Incorrect number of backend servers on grouped service")
+		t.FailNow()
+	}
+
+	for _, server := range backend.Servers {
+		if server.Weight != 154 {
+			t.Log(getJSON(config))
+			t.Log("Incorrect weight on grouped service")
+			t.FailNow()
+		}
 	}
 }
 
