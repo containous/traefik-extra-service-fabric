@@ -297,6 +297,97 @@ func TestFrontendLabelConfig(t *testing.T) {
 			validate: func(f types.Frontend) bool { return !f.PassTLSCert },
 		},
 		{
+			desc: "Has rule set",
+			labels: map[string]string{
+				label.TraefikEnable:                    "true",
+				label.TraefikFrontendRule + ".default": "Path: /",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.Routes) == 1 && f.Routes[label.TraefikFrontendRule+".default"].Rule == "Path: /"
+			},
+		},
+		{
+			desc: "Has SSLRedirectHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendSSLRedirect: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.SSLRedirect
+			},
+		},
+		{
+			desc: "Has Temporary SSLRedirectHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                       "true",
+				label.TraefikFrontendSSLTemporaryRedirect: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.SSLTemporaryRedirect
+			},
+		},
+		//Todo: Is this behaviour correct "bob.bob.com" => "[bob.bob.com]"?
+		{
+			desc: "Has SSLHostHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:          "true",
+				label.TraefikFrontendSSLHost: "bob.bob.com",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.SSLHost == "[bob.bob.com]"
+			},
+		},
+		{
+			desc: "Has STSSecondsHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:             "true",
+				label.TraefikFrontendSTSSeconds: "1337",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.STSSeconds == 1337
+			},
+		},
+		{
+			desc: "Has STSIncludeSubdomainsHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                       "true",
+				label.TraefikFrontendSTSIncludeSubdomains: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.STSIncludeSubdomains
+			},
+		},
+		{
+			desc: "Has STSPreloadHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:             "true",
+				label.TraefikFrontendSTSPreload: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.STSPreload
+			},
+		},
+		{
+			desc: "Has hasForceSTSHeaderHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendForceSTSHeader: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.ForceSTSHeader
+			},
+		},
+		{
+			desc: "Has hasForceSTSHeaderHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendForceSTSHeader: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.ForceSTSHeader
+			},
+		},
+		{
 			desc: "Has FrameDeny enabled",
 			labels: map[string]string{
 				label.TraefikEnable:            "true",
@@ -312,6 +403,85 @@ func TestFrontendLabelConfig(t *testing.T) {
 			},
 			validate: func(f types.Frontend) bool { return !f.Headers.FrameDeny },
 		},
+		//Todo: Is this behaviour correct "SAMEORIGIN" => "[SAMEORIGIN]"?
+		{
+			desc: "hasCustomFrameOptionsValueHeaders",
+			labels: map[string]string{
+				label.TraefikEnable:                          "true",
+				label.TraefikFrontendCustomFrameOptionsValue: "SAMEORIGIN",
+			},
+			validate: func(f types.Frontend) bool { return f.Headers.CustomFrameOptionsValue == "[SAMEORIGIN]" },
+		},
+		{
+			desc: "Has ContentTypeNosniffHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                     "true",
+				label.TraefikFrontendContentTypeNosniff: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.ContentTypeNosniff
+			},
+		},
+		{
+			desc: "Has BrowserXSSFilterHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                   "true",
+				label.TraefikFrontendBrowserXSSFilter: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.BrowserXSSFilter
+			},
+		},
+		{
+			desc: "Has ContentSecurityPolicyHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                        "true",
+				label.TraefikFrontendContentSecurityPolicy: "plugin-types image/png application/pdf; sandbox",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.ContentSecurityPolicy == "[plugin-types image/png application/pdf; sandbox]"
+			},
+		},
+		{
+			desc: "Has PublicKeyHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:            "true",
+				label.TraefikFrontendPublicKey: "somekeydata",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.PublicKey == "[somekeydata]"
+			},
+		},
+		{
+			desc: "Has ReferrerPolicyHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendReferrerPolicy: "same-origin",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.ReferrerPolicy == "[same-origin]"
+			},
+		},
+		{
+			desc: "Has IsDevelopmentHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                "true",
+				label.TraefikFrontendIsDevelopment: "true",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.IsDevelopment
+			},
+		},
+		{
+			desc: "Has AllowedhostHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:               "true",
+				label.TraefikFrontendAllowedHosts: "host1, host2",
+			},
+			validate: func(f types.Frontend) bool {
+				return f.Headers.AllowedHosts[0] == "host1"
+			},
+		},
 		{
 			desc: "Has RequestHeaders set",
 			labels: map[string]string{
@@ -323,13 +493,23 @@ func TestFrontendLabelConfig(t *testing.T) {
 			},
 		},
 		{
-			desc: "Has rule set",
+			desc: "Has ResponseHeaders set",
 			labels: map[string]string{
-				label.TraefikEnable:                    "true",
-				label.TraefikFrontendRule + ".default": "Path: /",
+				label.TraefikEnable:                  "true",
+				label.TraefikFrontendResponseHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
 			validate: func(f types.Frontend) bool {
-				return len(f.Routes) == 1 && f.Routes[label.TraefikFrontendRule+".default"].Rule == "Path: /"
+				return len(f.Headers.CustomResponseHeaders) == 2 && f.Headers.CustomResponseHeaders["X-Testing"] == "testing"
+			},
+		},
+		{
+			desc: "Has SSLProxyHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                  "true",
+				label.TraefikFrontendSSLProxyHeaders: "X-Testing:testing||X-Testing2:testing2",
+			},
+			validate: func(f types.Frontend) bool {
+				return len(f.Headers.SSLProxyHeaders) == 2 && f.Headers.SSLProxyHeaders["X-Testing"] == "testing"
 			},
 		},
 	}

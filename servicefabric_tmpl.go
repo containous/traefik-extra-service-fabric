@@ -124,15 +124,85 @@ const tmpl = `
     {{end}}]
     {{end}}
     
+    {{ if hasHeaders $service}}
     [frontends."frontend-{{$frontend}}".headers]
-    {{if hasFrameDenyHeaders $service}}
-    FrameDeny = {{getFrameDenyHeaders $service}}
-    {{end}}
+      {{if hasSSLRedirectHeaders $service}}
+      SSLRedirect = {{getSSLRedirectHeaders $service}}
+      {{end}}
+      {{if hasSSLTemporaryRedirectHeaders $service}}
+      SSLTemporaryRedirect = {{getSSLTemporaryRedirectHeaders $service}}
+      {{end}}
+      {{if hasSSLHostHeaders $service}}
+      SSLHost = "{{getSSLHostHeaders $service}}"
+      {{end}}
+      {{if hasSTSSecondsHeaders $service}}
+      STSSeconds = {{getSTSSecondsHeaders $service}}
+      {{end}}
+      {{if hasSTSIncludeSubdomainsHeaders $service}}
+      STSIncludeSubdomains = {{getSTSIncludeSubdomainsHeaders $service}}
+      {{end}}
+      {{if hasSTSPreloadHeaders $service}}
+      STSPreload = {{getSTSPreloadHeaders $service}}
+      {{end}}
+      {{if hasForceSTSHeaderHeaders $service}}
+      ForceSTSHeader = {{getForceSTSHeaderHeaders $service}}
+      {{end}}
+      {{if hasFrameDenyHeaders $service}}
+      FrameDeny = {{getFrameDenyHeaders $service}}
+      {{end}}
+      {{if hasCustomFrameOptionsValueHeaders $service}}
+      CustomFrameOptionsValue = "{{getCustomFrameOptionsValueHeaders $service}}"
+      {{end}}
+      {{if hasContentTypeNosniffHeaders $service}}
+      ContentTypeNosniff = {{getContentTypeNosniffHeaders $service}}
+      {{end}}
+      {{if hasBrowserXSSFilterHeaders $service}}
+      BrowserXSSFilter = {{getBrowserXSSFilterHeaders $service}}
+      {{end}}
+      {{if hasContentSecurityPolicyHeaders $service}}
+      ContentSecurityPolicy = "{{getContentSecurityPolicyHeaders $service}}"
+      {{end}}
+      {{if hasPublicKeyHeaders $service}}
+      PublicKey = "{{getPublicKeyHeaders $service}}"
+      {{end}}
+      {{if hasReferrerPolicyHeaders $service}}
+      ReferrerPolicy = "{{getReferrerPolicyHeaders $service}}"
+      {{end}}
+      {{if hasIsDevelopmentHeaders $service}}
+      IsDevelopment = {{getIsDevelopmentHeaders $service}}
+      {{end}}
 
-    {{if hasRequestHeaders $service}}
-      [frontends."frontend-{{$frontend}}".headers.customrequestheaders]
-      {{range $k, $v := getRequestHeaders $service}}
-      {{$k}} = "{{$v}}"
+      {{if hasAllowedHostsHeaders $service}}
+      AllowedHosts = [{{range getAllowedHostsHeaders $service}}
+        "{{.}}",
+        {{end}}]
+      {{end}}
+
+      {{if hasHostsProxyHeaders $service}}
+      HostsProxyHeaders = [{{range getHostsProxyHeaders $service}}
+        "{{.}}",
+        {{end}}]
+      {{end}}
+
+      {{if hasRequestHeaders $service}}
+        [frontends."frontend-{{$frontend}}".headers.customRequestHeaders]
+        {{range $k, $v := getRequestHeaders $service}}
+        {{$k}} = "{{$v}}"
+        {{end}}
+      {{end}}
+
+      {{if hasResponseHeaders $service}}
+      [frontends."frontend-{{$frontend}}".headers.customResponseHeaders]
+        {{range $k, $v := getResponseHeaders $service}}
+        {{$k}} = "{{$v}}"
+        {{end}}
+      {{end}}
+
+      {{if hasSSLProxyHeaders $service}}
+      [frontends."frontend-{{$frontend}}".headers.SSLProxyHeaders]
+        {{range $k, $v := getSSLProxyHeaders $service}}
+        {{$k}} = "{{$v}}"
+        {{end}}
       {{end}}
     {{end}}
 
