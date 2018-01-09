@@ -2,6 +2,7 @@ package servicefabric
 
 import (
 	"math"
+	"strings"
 	"text/template"
 
 	"github.com/containous/traefik/provider/label"
@@ -44,11 +45,11 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"getStickinessCookieName":     getFuncServiceStringLabel(label.TraefikBackendLoadBalancerStickinessCookieName, label.DefaultBackendLoadbalancerStickinessCookieName),
 
 		// Frontend Functions
-		"getPriority":             getFuncServiceStringLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
-		"hasRequestHeaders":       hasFuncService(label.TraefikFrontendRequestHeaders),
-		"getRequestHeaders":       getFuncServiceMapLabel(label.TraefikFrontendRequestHeaders),
-		"hasFrameDenyHeaders":     hasFuncService(label.TraefikFrontendFrameDeny),
-		"getFrameDenyHeaders":     getFuncBoolLabel(label.TraefikFrontendFrameDeny, false),
+		"getPriority": getFuncServiceStringLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
+		// "hasRequestHeaders":       hasFuncService(label.TraefikFrontendRequestHeaders),
+		// "getRequestHeaders":       getFuncServiceMapLabel(label.TraefikFrontendRequestHeaders),
+		// "hasFrameDenyHeaders":     hasFuncService(label.TraefikFrontendFrameDeny),
+		// "getFrameDenyHeaders":     getFuncBoolLabel(label.TraefikFrontendFrameDeny, false),
 		"getPassHostHeader":       getFuncServiceStringLabel(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
 		"getPassTLSCert":          getFuncBoolLabel(label.TraefikFrontendPassTLSCert, false),
 		"hasEntryPoints":          hasFuncService(label.TraefikFrontendEntryPoints),
@@ -61,6 +62,49 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"getRedirectRegex":        getFuncServiceStringLabel(label.TraefikFrontendRedirectRegex, ""),
 		"getRedirectReplacement":  getFuncServiceStringLabel(label.TraefikFrontendRedirectReplacement, ""),
 		"getFrontendRules":        getFuncServiceLabelWithPrefix(label.TraefikFrontendRule),
+
+		// Headers
+		"hasHeaders":                        hasHeaders,
+		"hasRequestHeaders":                 hasFuncService(label.TraefikFrontendRequestHeaders),
+		"getRequestHeaders":                 getFuncMapLabel(label.TraefikFrontendRequestHeaders),
+		"hasResponseHeaders":                hasFuncService(label.TraefikFrontendResponseHeaders),
+		"getResponseHeaders":                getFuncMapLabel(label.TraefikFrontendResponseHeaders),
+		"hasAllowedHostsHeaders":            hasFuncService(label.TraefikFrontendAllowedHosts),
+		"getAllowedHostsHeaders":            getFuncServiceSliceStringLabel(label.TraefikFrontendAllowedHosts),
+		"hasHostsProxyHeaders":              hasFuncService(label.TraefikFrontendHostsProxyHeaders),
+		"getHostsProxyHeaders":              getFuncServiceSliceStringLabel(label.TraefikFrontendHostsProxyHeaders),
+		"hasSSLRedirectHeaders":             hasFuncService(label.TraefikFrontendSSLRedirect),
+		"getSSLRedirectHeaders":             getFuncBoolLabel(label.TraefikFrontendSSLRedirect, false),
+		"hasSSLTemporaryRedirectHeaders":    hasFuncService(label.TraefikFrontendSSLTemporaryRedirect),
+		"getSSLTemporaryRedirectHeaders":    getFuncBoolLabel(label.TraefikFrontendSSLTemporaryRedirect, false),
+		"hasSSLHostHeaders":                 hasFuncService(label.TraefikFrontendSSLHost),
+		"getSSLHostHeaders":                 getFuncServiceSliceStringLabel(label.TraefikFrontendSSLHost),
+		"hasSSLProxyHeaders":                hasFuncService(label.TraefikFrontendSSLProxyHeaders),
+		"getSSLProxyHeaders":                getFuncMapLabel(label.TraefikFrontendSSLProxyHeaders),
+		"hasSTSSecondsHeaders":              hasFuncService(label.TraefikFrontendSTSSeconds),
+		"getSTSSecondsHeaders":              getFuncInt64Label(label.TraefikFrontendSTSSeconds, 0),
+		"hasSTSIncludeSubdomainsHeaders":    hasFuncService(label.TraefikFrontendSTSIncludeSubdomains),
+		"getSTSIncludeSubdomainsHeaders":    getFuncBoolLabel(label.TraefikFrontendSTSIncludeSubdomains, false),
+		"hasSTSPreloadHeaders":              hasFuncService(label.TraefikFrontendSTSPreload),
+		"getSTSPreloadHeaders":              getFuncBoolLabel(label.TraefikFrontendSTSPreload, false),
+		"hasForceSTSHeaderHeaders":          hasFuncService(label.TraefikFrontendForceSTSHeader),
+		"getForceSTSHeaderHeaders":          getFuncBoolLabel(label.TraefikFrontendForceSTSHeader, false),
+		"hasFrameDenyHeaders":               hasFuncService(label.TraefikFrontendFrameDeny),
+		"getFrameDenyHeaders":               getFuncBoolLabel(label.TraefikFrontendFrameDeny, false),
+		"hasCustomFrameOptionsValueHeaders": hasFuncService(label.TraefikFrontendCustomFrameOptionsValue),
+		"getCustomFrameOptionsValueHeaders": getFuncServiceSliceStringLabel(label.TraefikFrontendCustomFrameOptionsValue),
+		"hasContentTypeNosniffHeaders":      hasFuncService(label.TraefikFrontendContentTypeNosniff),
+		"getContentTypeNosniffHeaders":      getFuncBoolLabel(label.TraefikFrontendContentTypeNosniff, false),
+		"hasBrowserXSSFilterHeaders":        hasFuncService(label.TraefikFrontendBrowserXSSFilter),
+		"getBrowserXSSFilterHeaders":        getFuncBoolLabel(label.TraefikFrontendBrowserXSSFilter, false),
+		"hasContentSecurityPolicyHeaders":   hasFuncService(label.TraefikFrontendContentSecurityPolicy),
+		"getContentSecurityPolicyHeaders":   getFuncServiceSliceStringLabel(label.TraefikFrontendContentSecurityPolicy),
+		"hasPublicKeyHeaders":               hasFuncService(label.TraefikFrontendPublicKey),
+		"getPublicKeyHeaders":               getFuncServiceSliceStringLabel(label.TraefikFrontendPublicKey),
+		"hasReferrerPolicyHeaders":          hasFuncService(label.TraefikFrontendReferrerPolicy),
+		"getReferrerPolicyHeaders":          getFuncServiceSliceStringLabel(label.TraefikFrontendReferrerPolicy),
+		"hasIsDevelopmentHeaders":           hasFuncService(label.TraefikFrontendIsDevelopment),
+		"getIsDevelopmentHeaders":           getFuncBoolLabel(label.TraefikFrontendIsDevelopment, false),
 
 		// SF Service Grouping
 		"getGroupedServices": getFuncServicesGroupedByLabel(TraefikSFGroupName),
@@ -98,4 +142,13 @@ func hasMaxConnLabels(service ServiceItemExtended) bool {
 	mca := label.Has(service.Labels, label.TraefikBackendMaxConnAmount)
 	mcef := label.Has(service.Labels, label.TraefikBackendMaxConnExtractorFunc)
 	return mca && mcef
+}
+
+func hasHeaders(service ServiceItemExtended) bool {
+	for key := range service.Labels {
+		if strings.HasPrefix(key, label.TraefikFrontendHeaders) {
+			return true
+		}
+	}
+	return false
 }

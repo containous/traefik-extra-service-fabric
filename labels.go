@@ -12,6 +12,18 @@ const (
 	TraefikSFGroupWeight = "Traefik.SF.GroupWeight"
 )
 
+func getFuncInt64Label(labelName string, defaultValue int64) func(service ServiceItemExtended) int64 {
+	return func(service ServiceItemExtended) int64 {
+		return label.GetInt64Value(service.Labels, labelName, defaultValue)
+	}
+}
+
+func getFuncMapLabel(labelName string) func(service ServiceItemExtended) map[string]string {
+	return func(service ServiceItemExtended) map[string]string {
+		return label.GetMapValue(service.Labels, labelName)
+	}
+}
+
 func getFuncBoolLabel(labelName string, defaultValue bool) func(service ServiceItemExtended) bool {
 	return func(service ServiceItemExtended) bool {
 		return label.GetBoolValue(service.Labels, labelName, defaultValue)
@@ -41,12 +53,6 @@ func hasService(service ServiceItemExtended, labelName string) bool {
 func hasFuncService(labelName string) func(service ServiceItemExtended) bool {
 	return func(service ServiceItemExtended) bool {
 		return label.Has(service.Labels, labelName)
-	}
-}
-
-func getFuncServiceMapLabel(labelName string) func(service ServiceItemExtended) map[string]string {
-	return func(service ServiceItemExtended) map[string]string {
-		return label.GetMapValue(service.Labels, labelName)
 	}
 }
 
