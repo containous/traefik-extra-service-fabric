@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "######## Connect to cluster ###########"
+sfctl cluster select --endpoint http://localhost:19080
 echo "######## Upload app ###########"
 sfctl application upload --path ./testapp
 echo "######## Provision type ###########"

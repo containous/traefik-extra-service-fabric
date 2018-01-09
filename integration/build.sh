@@ -1,5 +1,8 @@
 #!/bin/bash
+
+DOCKERLOCATION="lawrencegripper"
+
 echo "######## Building docker images ###########"
-docker build -t lawrencegripper/sfonebox -f ./cluster.Dockerfile .
-docker build -t lawrencegripper/sfoneboxwithnode -f ./clusterwithnode.Dockerfile .
-docker build --network=host -t lawrencegripper/sfctl -f ./sfctl.Dockerfile .
+docker build -t $DOCKERLOCATION/sfonebox -f ./cluster.Dockerfile .
+docker build -t $DOCKERLOCATION/sfoneboxwithnode -f ./clusterwithnode.Dockerfile .
+docker build -t $DOCKERLOCATION/sfctl -f ./sfctl.Dockerfile .
