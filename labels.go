@@ -6,6 +6,12 @@ import (
 	"github.com/containous/traefik/provider/label"
 )
 
+// SF Specific Traefik Labels
+const (
+	TraefikSFGroupName   = "Traefik.SF.GroupName"
+	TraefikSFGroupWeight = "Traefik.SF.GroupWeight"
+)
+
 func getFuncBoolLabel(labelName string, defaultValue bool) func(service ServiceItemExtended) bool {
 	return func(service ServiceItemExtended) bool {
 		return label.GetBoolValue(service.Labels, labelName, defaultValue)
@@ -41,6 +47,18 @@ func hasFuncService(labelName string) func(service ServiceItemExtended) bool {
 func getFuncServiceMapLabel(labelName string) func(service ServiceItemExtended) map[string]string {
 	return func(service ServiceItemExtended) map[string]string {
 		return label.GetMapValue(service.Labels, labelName)
+	}
+}
+
+func getFuncServiceLabelWithPrefix(labelName string) func(service ServiceItemExtended) map[string]string {
+	return func(service ServiceItemExtended) map[string]string {
+		return getServiceLabelsWithPrefix(service, labelName)
+	}
+}
+
+func getFuncServicesGroupedByLabel(labelName string) func(services []ServiceItemExtended) map[string][]ServiceItemExtended {
+	return func(services []ServiceItemExtended) map[string][]ServiceItemExtended {
+		return getServices(services, labelName)
 	}
 }
 
