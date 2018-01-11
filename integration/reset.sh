@@ -4,9 +4,6 @@ DOCKERLOCATION="lawrencegripper"
 
 echo "Current directory: ${PWD}"
 
-echo "!WARNING: Containerized clusters require IPV6 enabled. Without updating your docker settings this will fail"
-echo "see https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started-mac for details"
-
 function isClusterHealthy () {
     echo "Checking cluster status..."
     HEALTHURL="http://localhost:19080/$/GetClusterHealth?NodesHealthStateFilter=1&ApplicationsHealthStateFilter=1&EventsHealthStateFilter=1&api-version=3.0"
@@ -21,14 +18,6 @@ function isClusterHealthy () {
     fi  
 }; 
 
-echo "######## Remove previous containers if they exist ###########"
-docker rm -f sftestcluster 
-docker rm -f sfsampleinstaller 
-docker rm -f sfappinstaller
-
-echo "######## Starting onebox cluster docker container ###########"
-docker run --name sftestcluster -d -p 19080:19080 -p 19000:19000 -p 25100-25200:25100-25200 $DOCKERLOCATION/sfoneboxwithnode 
-
 echo "Waiting for the cluster to start"
 ATTEMPTS=0
 RESULT=0
@@ -40,13 +29,13 @@ do
     ATTEMPTS=$((ATTEMPTS + 1))
 done
 
-echo "######## Deploying sample node apps to cluster ###########"
-if [ ! -f "./upload_test_apps.sh" ]
+echo "######## Reset node apps to cluster ###########"
+if [ ! -f "./reset_test_apps.sh" ]
 then
-	echo "Cannot find './upload_test_apps.sh' script must run under '/integration' folder."
+	echo "Cannot find './reset_test_apps.sh' script must run under '/integration' folder."
     exit 1
 fi
-docker run --name sfappinstaller -d --network=host -v ${PWD}:/src $DOCKERLOCATION/sfctl -f ./upload_test_apps.sh
+docker run --name sfappinstaller -d --network=host -v ${PWD}:/src $DOCKERLOCATION/sfctl -f ./reset_test_apps.sh
 
 # Note: Previously attemted to use 'docker commit' on sftestcluster to capture the state so apps didn't need to be installed each time 
 # however, this caused an issue with the SF cluster so have worked around this by installing apps each time.  
