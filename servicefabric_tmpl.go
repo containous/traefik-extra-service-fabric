@@ -61,7 +61,7 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
 
-            {{$backendName := getBackendName $service.Name $partition}}
+            {{$backendName := getBackendName $service $partition}}
             [backends."{{$backendName}}".servers."{{$replica.ID}}"]
             url = "{{getDefaultEndpoint $replica}}"
             weight = 1
