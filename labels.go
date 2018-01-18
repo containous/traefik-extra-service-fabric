@@ -8,8 +8,8 @@ import (
 
 // SF Specific Traefik Labels
 const (
-	TraefikSFGroupName   = "Traefik.SF.GroupName"
-	TraefikSFGroupWeight = "Traefik.SF.GroupWeight"
+	TraefikSFGroupName   = "traefik.sf.groupname"
+	TraefikSFGroupWeight = "traefik.sf.groupweight"
 )
 
 func getFuncInt64Label(labelName string, defaultValue int64) func(service ServiceItemExtended) int64 {
