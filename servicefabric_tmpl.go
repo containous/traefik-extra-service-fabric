@@ -17,7 +17,7 @@ const tmpl = `
   {{range $service := .Services}}
   {{if isEnabled $service}}
     {{range $partition := $service.Partitions}}
-      {{if eq $partition.ServiceKind "Stateless"}} 
+      {{if isStateless $service}} 
       [backends."{{$service.Name}}"]
         [backends."{{$service.Name}}".LoadBalancer]
         {{if hasLoadBalancerLabel $service}}
@@ -57,7 +57,7 @@ const tmpl = `
           url = "{{getDefaultEndpoint $instance}}"
           weight = {{getLabelValue $service "backend.weight" "1"}}
         {{end}}
-      {{else if eq $partition.ServiceKind "Stateful"}}
+      {{else if isStateful $service}}
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
 
@@ -95,7 +95,7 @@ const tmpl = `
 {{range $service := .Services}}
   {{if isEnabled $service}}
     {{$frontend := $service.Name}}
-    {{if eq $service.ServiceKind "Stateless"}}
+    {{if isStateless $service}}
     
     [frontends."frontend-{{$frontend}}"]
     backend = "{{$service.Name}}"
@@ -211,7 +211,7 @@ const tmpl = `
     rule = "{{$value}}"
     {{end}}
 
-    {{else if eq $service.ServiceKind "Stateful"}}
+    {{else if isStateful $service}}
       {{range $partition := $service.Partitions}}
         {{$partitionId := $partition.PartitionInformation.ID}}
 

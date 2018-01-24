@@ -1,10 +1,7 @@
 package servicefabric
 
 import (
-	"encoding/json"
-	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cenk/backoff"
@@ -90,74 +87,6 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 	return nil
 }
 
-func getDefaultEndpoint(instance replicaInstance) string {
-	id, data := instance.GetReplicaData()
-	endpoint, err := getReplicaDefaultEndpoint(data)
-	if err != nil {
-		log.Warnf("No default endpoint for replica %s in service %s endpointData: %s", id, data.Address)
-		return ""
-	}
-	return endpoint
-}
-
-func getReplicaDefaultEndpoint(replicaData *sf.ReplicaItemBase) (string, error) {
-	endpoints, err := decodeEndpointData(replicaData.Address)
-	if err != nil {
-		return "", err
-	}
-
-	var defaultHTTPEndpoint string
-	for _, v := range endpoints {
-		if strings.Contains(v, "http") {
-			defaultHTTPEndpoint = v
-			break
-		}
-	}
-
-	if len(defaultHTTPEndpoint) == 0 {
-		return "", errors.New("no default endpoint found")
-	}
-	return defaultHTTPEndpoint, nil
-}
-
-func getNamedEndpoint(instance replicaInstance, endpointName string) string {
-	id, data := instance.GetReplicaData()
-	endpoint, err := getReplicaNamedEndpoint(data, endpointName)
-	if err != nil {
-		log.Warnf("No names endpoint of %s for replica %s in endpointData: %s. Error: %v", endpointName, id, data.Address, err)
-		return ""
-	}
-	return endpoint
-}
-
-func getReplicaNamedEndpoint(replicaData *sf.ReplicaItemBase, endpointName string) (string, error) {
-	endpoints, err := decodeEndpointData(replicaData.Address)
-	if err != nil {
-		return "", err
-	}
-
-	endpoint, exists := endpoints[endpointName]
-	if !exists {
-		return "", errors.New("endpoint doesn't exist")
-	}
-	return endpoint, nil
-}
-
-func doesAppParamContain(app sf.ApplicationItem, key, shouldContain string) bool {
-	value := getApplicationParameter(app, key)
-	return strings.Contains(value, shouldContain)
-}
-
-func getApplicationParameter(app sf.ApplicationItem, key string) string {
-	for _, param := range app.Parameters {
-		if param.Key == key {
-			return param.Value
-		}
-	}
-	log.Errorf("Parameter %s doesn't exist in app %s", key, app.Name)
-	return ""
-}
-
 func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
 	apps, err := sfClient.GetApplications()
 	if err != nil {
@@ -239,31 +168,6 @@ func getValidInstances(sfClient sfClient, app sf.ApplicationItem, service sf.Ser
 	return validInstances
 }
 
-func getServices(services []ServiceItemExtended, key string) map[string][]ServiceItemExtended {
-	result := map[string][]ServiceItemExtended{}
-	for _, service := range services {
-		if value, exists := service.Labels[key]; exists {
-			if matchingServices, hasKeyAlready := result[value]; hasKeyAlready {
-				result[value] = append(matchingServices, service)
-			} else {
-				result[value] = []ServiceItemExtended{service}
-			}
-		}
-	}
-	return result
-}
-
-func filterServicesByLabelValue(services []ServiceItemExtended, key, expectedValue string) []ServiceItemExtended {
-	var srvWithLabel []ServiceItemExtended
-	for _, service := range services {
-		value, exists := service.Labels[key]
-		if exists && value == expectedValue {
-			srvWithLabel = append(srvWithLabel, service)
-		}
-	}
-	return srvWithLabel
-}
-
 func isPrimary(instance replicaInstance) bool {
 	_, data := instance.GetReplicaData()
 	return data.ReplicaRole == "Primary"
@@ -276,28 +180,4 @@ func isHealthy(instanceData *sf.ReplicaItemBase) bool {
 func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
 	_, err := getReplicaDefaultEndpoint(instanceData)
 	return err == nil
-}
-
-func decodeEndpointData(endpointData string) (map[string]string, error) {
-	var endpointsMap map[string]map[string]string
-
-	if endpointData == "" {
-		return nil, errors.New("endpoint data is empty")
-	}
-
-	err := json.Unmarshal([]byte(endpointData), &endpointsMap)
-	if err != nil {
-		return nil, err
-	}
-
-	endpoints, endpointsExist := endpointsMap["Endpoints"]
-	if !endpointsExist {
-		return nil, errors.New("endpoint doesn't exist in endpoint data")
-	}
-
-	return endpoints, nil
-}
-
-func getBackendName(service ServiceItemExtended, partition PartitionItemExtended) string {
-	return provider.Normalize(service.Name + partition.PartitionInformation.ID)
 }

@@ -893,6 +893,54 @@ func TestIsHealthy(t *testing.T) {
 	}
 }
 
+func TestIsStateX(t *testing.T) {
+	testCases := []struct {
+		desc              string
+		serviceItem       ServiceItemExtended
+		expectedStateless bool
+		expectedStateful  bool
+	}{
+		{
+			desc: "With Stateful service",
+			serviceItem: ServiceItemExtended{
+				ServiceItem: sf.ServiceItem{
+					ServiceKind: "Stateful",
+				},
+			},
+			expectedStateless: false,
+			expectedStateful:  true,
+		},
+		{
+			desc: "With Stateless service",
+			serviceItem: ServiceItemExtended{
+				ServiceItem: sf.ServiceItem{
+					ServiceKind: "Stateless",
+				},
+			},
+			expectedStateless: true,
+			expectedStateful:  false,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			isStatefulResult := isStateful(test.serviceItem)
+			isStatelessResult := isStateless(test.serviceItem)
+
+			if isStatefulResult != test.expectedStateful {
+				t.Errorf("Failed isStateful. Got %v, expected %v", isStatefulResult, test.expectedStateful)
+			}
+
+			if isStatelessResult != test.expectedStateless {
+				t.Errorf("Failed isStateless. Got %v, expected %v", isStatelessResult, test.expectedStateless)
+			}
+		})
+	}
+}
+
 func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	testCases := []struct {
 		desc             string

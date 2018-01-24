@@ -1,12 +1,17 @@
 package servicefabric
 
 import (
+	"encoding/json"
+	"errors"
 	"math"
 	"strings"
 	"text/template"
 
+	"github.com/containous/traefik/log"
+	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/types"
+	sf "github.com/jjcollinge/servicefabric"
 )
 
 func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, error) {
@@ -18,6 +23,8 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"getLabelValue":              getServiceStringLabel,
 		"getLabelsWithPrefix":        getServiceLabelsWithPrefix,
 		"isPrimary":                  isPrimary,
+		"isStateful":                 isStateful,
+		"isStateless":                isStateless,
 		"isEnabled":                  getFuncBoolLabel(label.TraefikEnable, false),
 		"getBackendName":             getBackendName,
 		"getDefaultEndpoint":         getDefaultEndpoint,
@@ -45,11 +52,7 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"getStickinessCookieName":     getFuncServiceStringLabel(label.TraefikBackendLoadBalancerStickinessCookieName, label.DefaultBackendLoadbalancerStickinessCookieName),
 
 		// Frontend Functions
-		"getPriority": getFuncServiceStringLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
-		// "hasRequestHeaders":       hasFuncService(label.TraefikFrontendRequestHeaders),
-		// "getRequestHeaders":       getFuncServiceMapLabel(label.TraefikFrontendRequestHeaders),
-		// "hasFrameDenyHeaders":     hasFuncService(label.TraefikFrontendFrameDeny),
-		// "getFrameDenyHeaders":     getFuncBoolLabel(label.TraefikFrontendFrameDeny, false),
+		"getPriority":             getFuncServiceStringLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
 		"getPassHostHeader":       getFuncServiceStringLabel(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
 		"getPassTLSCert":          getFuncBoolLabel(label.TraefikFrontendPassTLSCert, false),
 		"hasEntryPoints":          hasFuncService(label.TraefikFrontendEntryPoints),
@@ -125,6 +128,14 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 	return p.GetConfiguration(tmpl, sfFuncMap, templateObjects)
 }
 
+func isStateful(service ServiceItemExtended) bool {
+	return service.ServiceKind == "Stateful"
+}
+
+func isStateless(service ServiceItemExtended) bool {
+	return service.ServiceKind == "Stateless"
+}
+
 func hasRedirect(service ServiceItemExtended) bool {
 	return label.Has(service.Labels, label.TraefikFrontendRedirectEntryPoint) ||
 		label.Has(service.Labels, label.TraefikFrontendRedirectReplacement) && label.Has(service.Labels, label.TraefikFrontendRedirectRegex)
@@ -151,4 +162,121 @@ func hasHeaders(service ServiceItemExtended) bool {
 		}
 	}
 	return false
+}
+
+func getBackendName(service ServiceItemExtended, partition PartitionItemExtended) string {
+	return provider.Normalize(service.Name + partition.PartitionInformation.ID)
+}
+
+func getDefaultEndpoint(instance replicaInstance) string {
+	id, data := instance.GetReplicaData()
+	endpoint, err := getReplicaDefaultEndpoint(data)
+	if err != nil {
+		log.Warnf("No default endpoint for replica %s in service %s endpointData: %s", id, data.Address)
+		return ""
+	}
+	return endpoint
+}
+
+func getReplicaDefaultEndpoint(replicaData *sf.ReplicaItemBase) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
+	if err != nil {
+		return "", err
+	}
+
+	var defaultHTTPEndpoint string
+	for _, v := range endpoints {
+		if strings.Contains(v, "http") {
+			defaultHTTPEndpoint = v
+			break
+		}
+	}
+
+	if len(defaultHTTPEndpoint) == 0 {
+		return "", errors.New("no default endpoint found")
+	}
+	return defaultHTTPEndpoint, nil
+}
+
+func getNamedEndpoint(instance replicaInstance, endpointName string) string {
+	id, data := instance.GetReplicaData()
+	endpoint, err := getReplicaNamedEndpoint(data, endpointName)
+	if err != nil {
+		log.Warnf("No names endpoint of %s for replica %s in endpointData: %s. Error: %v", endpointName, id, data.Address, err)
+		return ""
+	}
+	return endpoint
+}
+
+func getReplicaNamedEndpoint(replicaData *sf.ReplicaItemBase, endpointName string) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
+	if err != nil {
+		return "", err
+	}
+
+	endpoint, exists := endpoints[endpointName]
+	if !exists {
+		return "", errors.New("endpoint doesn't exist")
+	}
+	return endpoint, nil
+}
+
+func getApplicationParameter(app sf.ApplicationItem, key string) string {
+	for _, param := range app.Parameters {
+		if param.Key == key {
+			return param.Value
+		}
+	}
+	log.Errorf("Parameter %s doesn't exist in app %s", key, app.Name)
+	return ""
+}
+
+func getServices(services []ServiceItemExtended, key string) map[string][]ServiceItemExtended {
+	result := map[string][]ServiceItemExtended{}
+	for _, service := range services {
+		if value, exists := service.Labels[key]; exists {
+			if matchingServices, hasKeyAlready := result[value]; hasKeyAlready {
+				result[value] = append(matchingServices, service)
+			} else {
+				result[value] = []ServiceItemExtended{service}
+			}
+		}
+	}
+	return result
+}
+
+func doesAppParamContain(app sf.ApplicationItem, key, shouldContain string) bool {
+	value := getApplicationParameter(app, key)
+	return strings.Contains(value, shouldContain)
+}
+
+func filterServicesByLabelValue(services []ServiceItemExtended, key, expectedValue string) []ServiceItemExtended {
+	var srvWithLabel []ServiceItemExtended
+	for _, service := range services {
+		value, exists := service.Labels[key]
+		if exists && value == expectedValue {
+			srvWithLabel = append(srvWithLabel, service)
+		}
+	}
+	return srvWithLabel
+}
+
+func decodeEndpointData(endpointData string) (map[string]string, error) {
+	var endpointsMap map[string]map[string]string
+
+	if endpointData == "" {
+		return nil, errors.New("endpoint data is empty")
+	}
+
+	err := json.Unmarshal([]byte(endpointData), &endpointsMap)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoints, endpointsExist := endpointsMap["Endpoints"]
+	if !endpointsExist {
+		return nil, errors.New("endpoint doesn't exist in endpoint data")
+	}
+
+	return endpoints, nil
 }
