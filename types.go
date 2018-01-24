@@ -9,11 +9,9 @@ import (
 // it belongs too and the replicas/partitions
 type ServiceItemExtended struct {
 	sf.ServiceItem
-	HasHTTPEndpoint bool
-	IsHealthy       bool
-	Application     sf.ApplicationItem
-	Partitions      []PartitionItemExtended
-	Labels          map[string]string
+	Application sf.ApplicationItem
+	Partitions  []PartitionItemExtended
+	Labels      map[string]string
 }
 
 // PartitionItemExtended provides a flattened view
