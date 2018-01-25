@@ -2,7 +2,7 @@
 
 DOCKERLOCATION="lawrencegripper"
 
-echo "Current directory: ${PWD}"
+echo "Resettting cluster - Current directory: ${PWD}"
 
 function isClusterHealthy () {
     echo "Checking cluster status..."
@@ -18,7 +18,7 @@ function isClusterHealthy () {
     fi  
 }; 
 
-echo "Waiting for the cluster to start"
+echo "Waiting for the cluster to be healthy"
 ATTEMPTS=0
 RESULT=0
 until [[ $RESULT = 1 || $ATTEMPTS -gt 30 ]]
@@ -35,7 +35,7 @@ then
 	echo "Cannot find './reset_test_apps.sh' script must run under '/integration' folder."
     exit 1
 fi
-docker run --name sfappinstaller -d --network=host -v ${PWD}:/src $DOCKERLOCATION/sfctl -f ./reset_test_apps.sh
+docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/reset_test_apps.sh
 
 # Note: Previously attemted to use 'docker commit' on sftestcluster to capture the state so apps didn't need to be installed each time 
 # however, this caused an issue with the SF cluster so have worked around this by installing apps each time.  

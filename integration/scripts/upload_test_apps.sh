@@ -5,7 +5,7 @@ echo "######## Upload app ###########"
 sfctl application upload --path ./testapp
 echo "######## Provision type ###########"
 sfctl application provision --application-type-build-path testapp
-echo "######## Create 200 instances ###########"
+echo "######## Create instances ###########"
 for i in {100..105}
 do
    ( echo "Deploying instance $i"

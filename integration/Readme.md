@@ -4,21 +4,40 @@
 
 Provide a quick and easy way to test Traefik Provider against a Service Fabric cluster
 
+## Running the tests
+
+Normal execution: `go test -v .`
+
+This will just show test results. 
+
+Verbose: `go test -v . -sfintegration.verbose`
+
+This will show log output from the provider and script output from starting and resetting the scripts. 
+
 ## Structure
 
-- `/testapp`: Contains a simple NodeJS app to run in the SF cluster
+### Docker images: `/docker`
+
+These build the necessary images to run the integration tests. Pre-built images are on dockerhub so only necessary for changes to images.
+
 - `cluster.dockerfile`: Builds a SF cluster image which starts quickly
 - `clusterwithnode.dockerfile`: Builds a SF cluster image with nodejs installed
 - `sfctl.dockerfile`: Builds an image with the `sfctl` tool installed. Used to interact with the cluster
 - `build.sh`: Builds the all docker images
-- `run.sh`: Creates a cluster listening on `http://localhost:19080` and installs 25 instances of `testapp`
 
-## Usage
+### Sample app: `/testapp`
 
-> Prerequisites:
-> All scripts expect to be executed in the `integration` folder. 
-> You need to add the additional docker daemon config to run SF in a container. See [details here.](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started-mac#create-a-local-container-and-set-up-service-fabric)
+This is a simple ServiceFabric app running nodejs
 
-Full build: Run `build.sh` to create docker images then run `run.sh` to start a cluster
-Lite Build: Run `run.sh` and images will be pulled from docker hub
+- `WebServicePkg/ServiceManifest.xml`: Manifest in which labels are defined
+
+### Managing the cluster: `/scripts`
+
+These scripts create the cluster, check health metrics etc.
+
+- `run.sh`: Pre-test - Creates a cluster listening on `http://localhost:19080` and installs instances of `testapp`
+    - `upload_test_apps.sh`: Used with the `sfctl` container to install test apps in the cluster
+- `reset.sh`: Between tests - Removes app instances and reinstalls to ensure tests can't affect each other
+    - `reset_test_apps.sh`: Used with `sfctl` container to reset cluster state
+- `stop.sh`: Post-test - Stops containers and cleans up
 

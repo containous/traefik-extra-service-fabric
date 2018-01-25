@@ -2,8 +2,9 @@
 echo "######## Connect to cluster ###########"
 sfctl cluster select --endpoint http://localhost:19080
 echo "######## Clear down existing apps ###########"
-sfctl application list --query items[].id -o tsv | grep node | xargs -n 1 -P 12 sfctl application delete --application-id
-
+sfctl application list --query items[].id -o tsv | xargs -n 1 sfctl application delete --application-id
+echo "######## Provision type ###########"
+sfctl application provision --application-type-build-path testapp
 echo "######## Create instances ###########"
 for i in {100..105}
 do

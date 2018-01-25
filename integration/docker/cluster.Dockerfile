@@ -1,4 +1,5 @@
 FROM servicefabricoss/service-fabric-onebox
+RUN apt-get clean
 WORKDIR /home/ClusterDeployer
 RUN ./setup.sh
 RUN locale-gen en_US.UTF-8
