@@ -1,16 +1,21 @@
 package servicefabric
 
 import (
+	"fmt"
+
 	sf "github.com/jjcollinge/servicefabric"
 )
 
 type clientMock struct {
-	applications *sf.ApplicationItemsPage
-	services     *sf.ServiceItemsPage
-	partitions   *sf.PartitionItemsPage
-	replicas     *sf.ReplicaItemsPage
-	instances    *sf.InstanceItemsPage
-	labels       map[string]string
+	applications                 *sf.ApplicationItemsPage
+	services                     *sf.ServiceItemsPage
+	partitions                   *sf.PartitionItemsPage
+	replicas                     *sf.ReplicaItemsPage
+	instances                    *sf.InstanceItemsPage
+	getServicelabelsResult       map[string]string
+	expectedPropertyName         string
+	getServiceExtensionMapResult map[string]string
+	getPropertiesResult          map[string]string
 }
 
 func (c *clientMock) GetApplications() (*sf.ApplicationItemsPage, error) {
@@ -33,10 +38,21 @@ func (c *clientMock) GetInstances(appName, serviceName, partitionName string) (*
 	return c.instances, nil
 }
 
-func (c *clientMock) GetServiceExtension(appType, applicationVersion, serviceTypeName, extensionKey string, response interface{}) error {
-	return nil
+func (c *clientMock) GetServiceExtensionMap(service *sf.ServiceItem, app *sf.ApplicationItem, extensionKey string) (map[string]string, error) {
+	if extensionKey != traefikServiceFabricExtensionKey {
+		return nil, fmt.Errorf("Extension key not expected value have: %v expect: %v", extensionKey, traefikServiceFabricExtensionKey)
+	}
+	return c.getServiceExtensionMapResult, nil
 }
 
 func (c *clientMock) GetServiceLabels(service *sf.ServiceItem, app *sf.ApplicationItem, prefix string) (map[string]string, error) {
-	return c.labels, nil
+	return c.getServicelabelsResult, nil
+}
+
+// Note this is dumb mock the `exists`
+func (c *clientMock) GetProperties(name string) (bool, map[string]string, error) {
+	if c.expectedPropertyName == name {
+		return true, c.getPropertiesResult, nil
+	}
+	return false, nil, nil
 }

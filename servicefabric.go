@@ -8,12 +8,15 @@ import (
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/provider"
+	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
 )
 
 var _ provider.Provider = (*Provider)(nil)
+
+const traefikServiceFabricExtensionKey = "Traeifk"
 
 // Provider holds for configuration for the provider
 type Provider struct {
@@ -106,7 +109,7 @@ func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
 				Application: app,
 			}
 
-			if labels, err := sfClient.GetServiceLabels(&service, &app, ""); err != nil {
+			if labels, err := getLabels(sfClient, &service, &app); err != nil {
 				log.Error(err)
 			} else {
 				item.Labels = labels
@@ -118,9 +121,9 @@ func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
 				for _, partition := range partitions.Items {
 					partitionExt := PartitionItemExtended{PartitionItem: partition}
 
-					if partition.ServiceKind == "Stateful" {
+					if isStateful(item) {
 						partitionExt.Replicas = getValidReplicas(sfClient, app, service, partition)
-					} else if partition.ServiceKind == "Stateless" {
+					} else if isStateless(item) {
 						partitionExt.Instances = getValidInstances(sfClient, app, service, partition)
 					} else {
 						log.Errorf("Unsupported service kind %s in service %s", partition.ServiceKind, service.Name)
@@ -180,4 +183,23 @@ func isHealthy(instanceData *sf.ReplicaItemBase) bool {
 func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
 	_, err := getReplicaDefaultEndpoint(instanceData)
 	return err == nil
+}
+
+// Return a set of labels from the Extension and Property manager
+// Allow Extension labels to disable importing labels from the property manager.
+func getLabels(sfClient sfClient, service *sf.ServiceItem, app *sf.ApplicationItem) (map[string]string, error) {
+	labels, err := sfClient.GetServiceExtensionMap(service, app, traefikServiceFabricExtensionKey)
+	if err != nil {
+		log.Errorf("Error retreiving serviceExtensionMap: %v", err)
+		return nil, err
+	}
+
+	if label.GetBoolValue(labels, traefikSFEnableLabelOverrides, traefikSFEnableLabelOverridesDefault) {
+		if exists, properties, err := sfClient.GetProperties(service.ID); err == nil && exists {
+			for key, value := range properties {
+				labels[key] = value
+			}
+		}
+	}
+	return labels, nil
 }

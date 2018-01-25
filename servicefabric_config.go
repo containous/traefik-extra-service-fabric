@@ -110,8 +110,8 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"getIsDevelopmentHeaders":           getFuncBoolLabel(label.TraefikFrontendIsDevelopment, false),
 
 		// SF Service Grouping
-		"getGroupedServices": getFuncServicesGroupedByLabel(TraefikSFGroupName),
-		"getGroupedWeight":   getFuncServiceStringLabel(TraefikSFGroupWeight, "1"),
+		"getGroupedServices": getFuncServicesGroupedByLabel(traefikSFGroupName),
+		"getGroupedWeight":   getFuncServiceStringLabel(traefikSFGroupWeight, "1"),
 	}
 
 	services, err := getClusterServices(sfClient)

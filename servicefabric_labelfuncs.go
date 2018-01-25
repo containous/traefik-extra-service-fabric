@@ -8,9 +8,10 @@ import (
 
 // SF Specific Traefik Labels
 const (
-	TraefikSFGroupName            = "traefik.servicefabric.groupname"
-	TraefikSFGroupWeight          = "traefik.servicefabric.groupweight"
-	TraefikSFEnableLabelOverrides = "traefik.servicefabric.enablelabeloverrides"
+	traefikSFGroupName                   = "traefik.servicefabric.groupname"
+	traefikSFGroupWeight                 = "traefik.servicefabric.groupweight"
+	traefikSFEnableLabelOverrides        = "traefik.servicefabric.enablelabeloverrides"
+	traefikSFEnableLabelOverridesDefault = true
 )
 
 func getFuncInt64Label(labelName string, defaultValue int64) func(service ServiceItemExtended) int64 {
