@@ -105,12 +105,13 @@ var labels = map[string]string{
 func TestUpdateConfig(t *testing.T) {
 
 	client := &clientMock{
-		applications: apps,
-		services:     services,
-		partitions:   partitions,
-		replicas:     nil,
-		instances:    instances,
-		labels:       labels,
+		applications:           apps,
+		services:               services,
+		partitions:             partitions,
+		replicas:               nil,
+		instances:              instances,
+		getServicelabelsResult: labels,
+		expectedPropertyName:   services.Items[0].ID,
 	}
 
 	provider := Provider{}
@@ -162,7 +163,9 @@ func TestServicesPresentInConfig(t *testing.T) {
 		partitions:   partitions,
 		replicas:     nil,
 		instances:    instances,
-		labels:       labels,
+		// getServicelabelsResult: labels,
+		getServiceExtensionMapResult: labels,
+		expectedPropertyName:         services.Items[0].ID,
 	}
 
 	config, err := requestConfig(provider, client)
@@ -209,6 +212,7 @@ func TestServicesPresentInConfig(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			if !test.check(config) {
 				t.Errorf("Check failed: %v", getJSON(config))
 			}
@@ -520,12 +524,12 @@ func TestFrontendLabelConfig(t *testing.T) {
 			t.Parallel()
 			provider := Provider{}
 			client := &clientMock{
-				applications: apps,
-				services:     services,
-				partitions:   partitions,
-				replicas:     nil,
-				instances:    instances,
-				labels:       test.labels,
+				applications:                 apps,
+				services:                     services,
+				partitions:                   partitions,
+				replicas:                     nil,
+				instances:                    instances,
+				getServiceExtensionMapResult: test.labels,
 			}
 
 			config, err := requestConfig(provider, client)
@@ -634,12 +638,12 @@ func TestBackendLabelConfig(t *testing.T) {
 			t.Parallel()
 			provider := Provider{}
 			client := &clientMock{
-				applications: apps,
-				services:     services,
-				partitions:   partitions,
-				replicas:     nil,
-				instances:    instances,
-				labels:       test.labels,
+				applications:                 apps,
+				services:                     services,
+				partitions:                   partitions,
+				replicas:                     nil,
+				instances:                    instances,
+				getServiceExtensionMapResult: test.labels,
 			}
 			config, err := requestConfig(provider, client)
 			if err != nil {
@@ -666,6 +670,39 @@ func TestBackendLabelConfig(t *testing.T) {
 	}
 }
 
+func TestDisableLabelOverrides(t *testing.T) {
+	extensionLabels := map[string]string{
+		label.TraefikEnable:           "true",
+		traefikSFEnableLabelOverrides: "false",
+	}
+	propertyLabels := map[string]string{
+		"shouldnotexist": "true",
+	}
+
+	client := &clientMock{
+		applications:                 apps,
+		services:                     services,
+		partitions:                   partitions,
+		replicas:                     nil,
+		instances:                    instances,
+		getPropertiesResult:          propertyLabels,
+		getServiceExtensionMapResult: extensionLabels,
+		expectedPropertyName:         services.Items[0].ID,
+	}
+
+	res, err := getLabels(client, &services.Items[0], &apps.Items[0])
+
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+
+	_, exists := res["shouldnotexist"]
+	if exists {
+		t.Fail()
+	}
+}
+
 func TestGroupedServicesFrontends(t *testing.T) {
 	groupName := "groupedbackends"
 	groupWeight := "154"
@@ -677,10 +714,10 @@ func TestGroupedServicesFrontends(t *testing.T) {
 		partitions:   partitions,
 		replicas:     nil,
 		instances:    instances,
-		labels: map[string]string{
+		getServiceExtensionMapResult: map[string]string{
 			label.TraefikEnable:  "true",
-			TraefikSFGroupName:   groupName,
-			TraefikSFGroupWeight: groupWeight,
+			traefikSFGroupName:   groupName,
+			traefikSFGroupWeight: groupWeight,
 		},
 	}
 	config, err := requestConfig(provider, client)
@@ -727,10 +764,10 @@ func TestGroupedServicesBackends(t *testing.T) {
 		partitions:   partitions,
 		replicas:     nil,
 		instances:    instances,
-		labels: map[string]string{
+		getServiceExtensionMapResult: map[string]string{
 			label.TraefikEnable:  "true",
-			TraefikSFGroupName:   groupName,
-			TraefikSFGroupWeight: groupWeight,
+			traefikSFGroupName:   groupName,
+			traefikSFGroupWeight: groupWeight,
 		},
 	}
 	config, err := requestConfig(provider, client)

@@ -69,7 +69,7 @@
 [[projects]]
   name = "github.com/jjcollinge/servicefabric"
   packages = ["."]
-  revision = "3daa0c1131aa90080d058ee2745fcd9050f0ab2c"
+  revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
 
 [[projects]]
   branch = "master"
@@ -110,6 +110,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0830acbf7741bf35b2e4f6b3bbe994c96792ecd0b020f171276149026413d70b"
+  inputs-digest = "80f3928471a7e1bc924cb3ed1dada3b44ce2c5a29f4e024aeb6ef336f8d67b79"
   solver-name = "gps-cdcl"
   solver-version = 1
