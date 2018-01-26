@@ -2,10 +2,13 @@
 
 GOFILES := $(shell go list -f '{{range $$index, $$element := .GoFiles}}{{$$.Dir}}/{{$$element}}{{"\n"}}{{end}}' ./... | grep -v '/vendor/')
 
-default: clean checks test build
+default: clean checks test build integration-tests
 
 test: clean
-	go test -v -cover ./...
+	go test -v -cover .
+
+integration-tests: 
+	go test -v ./integration/*_test.go 
 
 dependencies:
 	dep ensure -v
@@ -17,7 +20,7 @@ build:
 	go build
 
 checks: check-fmt
-	gometalinter --vendor --enable=misspell ./...
+	gometalinter --vendor --enable=misspell --deadline=2m ./...
 
 check-fmt: SHELL := /bin/bash
 check-fmt:

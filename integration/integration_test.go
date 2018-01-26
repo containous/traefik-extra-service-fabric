@@ -16,14 +16,19 @@ import (
 )
 
 var isVerbose bool
+var isClusterAlreadyRunning bool
 
 func init() {
-	flag.BoolVar(&isVerbose, "sfintegration.verbose", false, "Show the full ouput of cluster creation scripts")
+	flag.BoolVar(&isVerbose, "sfintegration.verbose", false, "Show the full output of cluster creation scripts")
+	flag.BoolVar(&isClusterAlreadyRunning, "sfintegration.clusterrunning", false, "Will skip cluster creation and teardown")
 }
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	startTestCluster()
+
+	if !isClusterAlreadyRunning {
+		startTestCluster()
+	}
 
 	if !isVerbose {
 		log.SetOutput(ioutil.Discard)
@@ -31,21 +36,21 @@ func TestMain(m *testing.M) {
 
 	retCode := m.Run()
 
-	stopTestCluster()
+	if !isClusterAlreadyRunning {
+		stopTestCluster()
+	}
 	os.Exit(retCode)
 }
 
 func TestServiceDiscovery(t *testing.T) {
-	defer resetTestCluster(t)
 	provider := servicefabric.Provider{
 		BaseProvider:         provider.BaseProvider{},
 		ClusterManagementURL: "http://localhost:19080",
-		RefreshSeconds:       3,
+		RefreshSeconds:       1,
 	}
 	configurationChan := make(chan types.ConfigMessage)
 	ctx := context.Background()
 	pool := safe.NewPool(ctx)
-	defer pool.Stop()
 
 	err := provider.Provide(configurationChan, pool, types.Constraints{})
 	if err != nil {
@@ -53,18 +58,17 @@ func TestServiceDiscovery(t *testing.T) {
 		return
 	}
 
-	timeout := make(chan string, 1)
-	go func() {
-		time.Sleep(time.Second * 12)
-		timeout <- "Timeout triggered"
-	}()
-
 	select {
 	case actual := <-configurationChan:
-		t.Log(toJSON(actual))
-		t.Log("Configuration received", actual)
-		//todo: Do some checks!
-	case <-timeout:
+		t.Log("Configuration received", toJSON(actual))
+		if len(actual.Configuration.Frontends) != 6 {
+			t.Error("Expected to see 5 frontends enabled in the cluster")
+		}
+		if len(actual.Configuration.Backends) != 6 {
+			t.Error("Expected to see 5 backends enabled in the cluster")
+		}
+	case <-time.After(time.Second * 12):
+		log.Info("Timeout occurred")
 		t.Error("Provider failed to return configuration")
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"testing"
 	"time"
 
 	"github.com/containous/traefik/log"
@@ -20,10 +19,10 @@ func startTestCluster() {
 
 	_, err := runScript("run.sh", time.Second*180)
 	if err != nil {
-		panic("Failed to start cluster")
+		panic(err)
 	}
 
-	fmt.Println("INTEGRATION TEST: Cluster started sucessfully.")
+	fmt.Println("INTEGRATION TEST: Cluster started successfully.")
 }
 
 func stopTestCluster() {
@@ -33,19 +32,20 @@ func stopTestCluster() {
 	}
 }
 
-func resetTestCluster(t *testing.T) string {
-	output, err := runScript("reset.sh", time.Second*60)
-	if err != nil {
-		t.Error(err)
-		t.Log(output)
-		t.FailNow()
-	}
+// func resetTestCluster(t *testing.T) string {
+// 	output, err := runScript("reset.sh", time.Second*80)
+// 	if err != nil {
+// 		t.Error(err)
+// 		t.Log(output)
+// 		t.FailNow()
+// 	}
 
-	return output
-}
+// 	return output
+// }
 
 func runScript(scriptName string, timeout time.Duration) (string, error) {
 	resultChan := make(chan string, 1)
+	failedChan := make(chan error, 1)
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -63,7 +63,8 @@ func runScript(scriptName string, timeout time.Duration) (string, error) {
 
 			err := cmd.Run()
 			if err != nil {
-				log.Infof("Failed running script: %v", err)
+				failedChan <- err
+				return
 			}
 			resultChan <- ""
 		} else {
@@ -76,16 +77,12 @@ func runScript(scriptName string, timeout time.Duration) (string, error) {
 
 	}()
 
-	timeoutChan := make(chan int, 1)
-	go func() {
-		time.Sleep(timeout)
-		timeoutChan <- 1
-	}()
-
 	select {
+	case err := <-failedChan:
+		return "", err
 	case output := <-resultChan:
 		return string(output), nil
-	case <-timeoutChan:
+	case <-time.After(timeout):
 		cmd.Process.Kill()
 		return "", fmt.Errorf("Timeout waiting for script after: %v", timeout)
 	}

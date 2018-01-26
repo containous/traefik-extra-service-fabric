@@ -7,7 +7,7 @@
             <Labels xmlns="http://schemas.microsoft.com/2015/03/fabact-no-schema">
               <Label Key="traefik.frontend.rule.default">PathPrefixStrip: /x</Label>
               <Label Key="traefik.frontend.priority">10</Label>              
-              <Label Key="traefik.expose">true</Label>
+              <Label Key="traefik.enable">true</Label>
             </Labels>
           </Extension>
       </Extensions>
@@ -16,7 +16,7 @@
    <CodePackage Name="Code" Version="1.0.0">
       <EntryPoint>
          <ExeHost>
-            <Program>node.sh</Program>
+            <Program>./node.sh</Program>
             <Arguments>server.js</Arguments>
             <WorkingFolder>CodeBase</WorkingFolder>
             <ConsoleRedirection FileRetentionCount="5" FileMaxSizeInKb="2048"/>

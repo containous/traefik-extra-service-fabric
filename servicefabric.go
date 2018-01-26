@@ -16,7 +16,7 @@ import (
 
 var _ provider.Provider = (*Provider)(nil)
 
-const traefikServiceFabricExtensionKey = "Traeifk"
+const traefikServiceFabricExtensionKey = "Traefik"
 
 // Provider holds for configuration for the provider
 type Provider struct {
