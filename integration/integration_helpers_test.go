@@ -17,7 +17,7 @@ func startTestCluster() {
 	fmt.Println("INTEGRATION TEST: Use `sfintegration.verbose` flag to show full output")
 	fmt.Println("INTEGRATION TEST: Starting cluster....")
 
-	_, err := runScript("run.sh", time.Second*180)
+	_, err := runScript("run.sh", time.Second*900)
 	if err != nil {
 		panic(err)
 	}

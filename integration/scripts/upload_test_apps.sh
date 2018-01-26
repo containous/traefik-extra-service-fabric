@@ -14,3 +14,4 @@ done
 
 echo "Waiting for deployment to finish..."
 wait
+sleep 60

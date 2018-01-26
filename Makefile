@@ -2,13 +2,13 @@
 
 GOFILES := $(shell go list -f '{{range $$index, $$element := .GoFiles}}{{$$.Dir}}/{{$$element}}{{"\n"}}{{end}}' ./... | grep -v '/vendor/')
 
-default: clean checks test build integration-tests
+default: clean checks test build
 
 test: clean
 	go test -v -cover .
 
 integration-tests: 
-	go test -v ./integration/*_test.go 
+	go test -v -timeout=20m ./integration/*_test.go  -sfintegration.verbose
 
 dependencies:
 	dep ensure -v

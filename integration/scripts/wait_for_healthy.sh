@@ -27,3 +27,6 @@ do
     RESULT=$?
     ATTEMPTS=$((ATTEMPTS + 1))
 done
+
+echo "Cluster logs"
+docker logs sftestcluster
