@@ -8,7 +8,7 @@ test: clean
 	go test -v -cover .
 
 integration-tests: 
-	go test -v -timeout=20m ./integration/*_test.go  -sfintegration.verbose
+	go test -v -timeout=20m ./integration/*_test.go
 
 dependencies:
 	dep ensure -v

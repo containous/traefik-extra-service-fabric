@@ -14,6 +14,11 @@ Verbose: `go test -v . -sfintegration.verbose`
 
 This will show log output from the provider and script output from starting and resetting the scripts. 
 
+## All Flags
+
+- `sfintegration.verbose`: Shows full output from scripts and additional logging in `stdout` 
+- `sfintegration.clusterrunning`: Skips starting and stopping cluster to enable fast local testing when a cluster is already running on your machine. For example: manually run `./scripts/run.sh` then use this to skip waiting for cluster start and stop when adding or developing tests.
+
 ## Structure
 
 ### Docker images: `/docker`
