@@ -21,7 +21,7 @@ bash -f ./wait_for_healthy.sh
 echo "######## Deploying sample node apps to cluster ###########"
 if [ ! -f "./upload_test_apps.sh" ]
 then
-	echo "Cannot find '${PWD}/upload_test_apps.sh' script must run under '/integration' folder."
+	echo "Cannot find '${PWD}/upload_test_apps.sh' script must run under '/integration/scripts' folder."
     exit 1
 fi
 docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/upload_test_apps.sh

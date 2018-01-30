@@ -4,7 +4,9 @@ go:
   - 1.9.x
   - master
 
-sudo: false
+sudo: required
+services:
+  - docker
 
 notifications:
   email:
@@ -18,6 +20,11 @@ before_install:
   # Install linters and misspell
   - go get -u github.com/alecthomas/gometalinter
   - gometalinter --install
+  # Install latest docker image
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update
+  - sudo apt-get -y install docker-ce
     # FIXME(#46924): these two commands are required to enable IPv6,
   # they shouldn't exist, please revert once more official solutions appeared.
   # see https://github.com/travis-ci/travis-ci/issues/8891#issuecomment-353403729
@@ -25,6 +32,7 @@ before_install:
       echo '{"ipv6":true,"fixed-cidr-v6":"fe80::/64"}' | sudo tee /etc/docker/daemon.json;
       sudo service docker restart;
     fi
+  - docker volume prune -f
 
 install: make dependencies
 

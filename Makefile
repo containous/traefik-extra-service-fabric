@@ -8,7 +8,7 @@ test: clean
 	go test -v -cover .
 
 integration-tests: 
-	go test -v -timeout=20m ./integration/*_test.go
+	go test -v -timeout=20m ./integration/*_test.go -sfintegration.verbose
 
 dependencies:
 	dep ensure -v
@@ -20,7 +20,7 @@ build:
 	go build
 
 checks: check-fmt
-	gometalinter --vendor --enable=misspell --deadline=2m ./...
+	gometalinter --vendor --disable=vetshadow --enable=misspell --deadline=2m ./...
 
 check-fmt: SHELL := /bin/bash
 check-fmt:
