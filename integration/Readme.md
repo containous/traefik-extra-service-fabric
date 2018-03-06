@@ -1,4 +1,4 @@
-### Integration Testing with Docker and Service Fabric
+# Integration Testing with Docker and Service Fabric
 
 ## Aims
 
@@ -8,9 +8,9 @@ Provide a quick and easy way to test Traefik Provider against a Service Fabric c
 
 Normal execution: `go test -v .`
 
-This will just show test results. 
+This will just show test results.
 
-Verbose: `go test -v . -sfintegration.verbose`
+Verbose: `go test -v . -sfintegration.verbose -sfintegration.clusterrunning`
 
 This will show log output from the provider and script output from starting and resetting the scripts. 
 
@@ -45,4 +45,3 @@ These scripts create the cluster, check health metrics etc.
 - `reset.sh`: Between tests - Removes app instances and reinstalls to ensure tests can't affect each other
     - `reset_test_apps.sh`: Used with `sfctl` container to reset cluster state
 - `stop.sh`: Post-test - Stops containers and cleans up
-

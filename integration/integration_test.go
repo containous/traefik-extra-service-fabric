@@ -101,6 +101,7 @@ func TestLabelOverrides(t *testing.T) {
 		t.FailNow()
 	}
 
+	defer enableService()
 	client := &http.Client{}
 	result, err := client.Do(req)
 
@@ -175,4 +176,23 @@ func TestBackendUrlCorrect(t *testing.T) {
 		log.Info("Timeout occurred")
 		t.Error("Provider failed to return configuration")
 	}
+}
+
+func enableService() {
+	//Disable the first service
+	req, _ := http.NewRequest(
+		"PUT",
+		"http://localhost:19080/Names/node25100/WebService/$/GetProperty?api-version=6.0&IncludeValues=true",
+		bytes.NewBufferString(`{
+			"PropertyName": "traefik.enable",
+			"Value": {
+			  "Kind": "String",
+			  "Data": "true"
+			},
+			"CustomTypeId": "LabelType"
+		  }`),
+	)
+
+	client := &http.Client{}
+	_, _ = client.Do(req)
 }

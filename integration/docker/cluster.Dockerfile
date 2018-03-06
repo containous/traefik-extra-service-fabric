@@ -1,4 +1,4 @@
-FROM servicefabricoss/service-fabric-onebox
+FROM microsoft/service-fabric-onebox
 RUN apt-get clean
 WORKDIR /home/ClusterDeployer
 RUN ./setup.sh
