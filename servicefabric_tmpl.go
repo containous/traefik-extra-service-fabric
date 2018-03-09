@@ -58,16 +58,20 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
 
-            {{$backendName := getBackendName $service.Name $partition}}
-            [backends."{{$backendName}}".servers."{{$replica.ID}}"]
-            url = "{{getDefaultEndpoint $replica}}"
-            weight = 1
+            {{$svcType := printf "%T" $service.Name}}
+            {{if eq $svcType "servicefabric.ServiceItemExtended"}}
+              {{$backendName := getBackendName $service.Name $partition}}
+            
+              [backends."{{$backendName}}".servers."{{$replica.ID}}"]
+              url = "{{getDefaultEndpoint $replica}}"
+              weight = 1
 
-            [backends."{{$backendName}}".LoadBalancer]
-            method = "drr"
+              [backends."{{$backendName}}".LoadBalancer]
+              method = "drr"
 
-            [backends."{{$backendName}}".circuitbreaker]
-            expression = "NetworkErrorRatio() > 0.5"
+              [backends."{{$backendName}}".circuitbreaker]
+              expression = "NetworkErrorRatio() > 0.5"
+            {{end}}
 
           {{end}}
         {{end}}
