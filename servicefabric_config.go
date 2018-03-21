@@ -34,80 +34,24 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 		"filterServicesByLabelValue": filterServicesByLabelValue, // FIXME unused
 
 		// Backend functions
-		"getWeight":                   getFuncServiceStringLabel(label.TraefikWeight, label.DefaultWeight),
-		"getProtocol":                 getFuncServiceStringLabel(label.TraefikProtocol, label.DefaultProtocol),
-		"hasHealthCheckLabels":        hasFuncService(label.TraefikBackendHealthCheckPath),
-		"getHealthCheckPath":          getFuncServiceStringLabel(label.TraefikBackendHealthCheckPath, ""),
-		"getHealthCheckPort":          getFuncServiceStringLabel(label.TraefikBackendHealthCheckPort, "0"),
-		"getHealthCheckInterval":      getFuncServiceStringLabel(label.TraefikBackendHealthCheckInterval, ""),
-		"hasCircuitBreakerLabel":      hasFuncService(label.TraefikBackendCircuitBreakerExpression),
-		"getCircuitBreakerExpression": getFuncServiceStringLabel(label.TraefikBackendCircuitBreakerExpression, label.DefaultCircuitBreakerExpression),
-		"hasLoadBalancerLabel":        hasLoadBalancerLabel,
-		"getLoadBalancerMethod":       getFuncServiceStringLabel(label.TraefikBackendLoadBalancerMethod, label.DefaultBackendLoadBalancerMethod),
-		"hasMaxConnLabels":            hasMaxConnLabels,
-		"getMaxConnAmount":            getFuncServiceStringLabel(label.TraefikBackendMaxConnAmount, string(math.MaxInt64)),
-		"getMaxConnExtractorFunc":     getFuncServiceStringLabel(label.TraefikBackendMaxConnExtractorFunc, label.DefaultBackendMaxconnExtractorFunc),
-		"getSticky":                   getFuncBoolLabel(label.TraefikBackendLoadBalancerSticky, false),
-		"hasStickinessLabel":          hasFuncService(label.TraefikBackendLoadBalancerStickiness),
-		"getStickinessCookieName":     getFuncServiceStringLabel(label.TraefikBackendLoadBalancerStickinessCookieName, label.DefaultBackendLoadbalancerStickinessCookieName),
+		"getWeight":         getFuncServiceStringLabel(label.TraefikWeight, label.DefaultWeight),
+		"getProtocol":       getFuncServiceStringLabel(label.TraefikProtocol, label.DefaultProtocol),
+		"getMaxConn":        getMaxConn,
+		"getHealthCheck":    getHealthCheck,
+		"getCircuitBreaker": getCircuitBreaker,
+		"getLoadBalancer":   getLoadBalancer,
 
 		// Frontend Functions
 		"getPriority":             getFuncServiceStringLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
 		"getPassHostHeader":       getFuncServiceStringLabel(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
 		"getPassTLSCert":          getFuncBoolLabel(label.TraefikFrontendPassTLSCert, false),
-		"hasEntryPoints":          hasFuncService(label.TraefikFrontendEntryPoints),
 		"getEntryPoints":          getFuncServiceSliceStringLabel(label.TraefikFrontendEntryPoints),
-		"hasBasicAuth":            hasFuncService(label.TraefikFrontendAuthBasic),
 		"getBasicAuth":            getFuncServiceSliceStringLabel(label.TraefikFrontendAuthBasic),
 		"getWhitelistSourceRange": getFuncServiceSliceStringLabel(label.TraefikFrontendWhitelistSourceRange),
-		"hasRedirect":             hasRedirect,
-		"getRedirectEntryPoint":   getFuncServiceStringLabel(label.TraefikFrontendRedirectEntryPoint, label.DefaultFrontendRedirectEntryPoint),
-		"getRedirectRegex":        getFuncServiceStringLabel(label.TraefikFrontendRedirectRegex, ""),
-		"getRedirectReplacement":  getFuncServiceStringLabel(label.TraefikFrontendRedirectReplacement, ""),
 		"getFrontendRules":        getFuncServiceLabelWithPrefix(label.TraefikFrontendRule),
 
-		// Headers
-		"hasHeaders":                        hasHeaders,
-		"hasRequestHeaders":                 hasFuncService(label.TraefikFrontendRequestHeaders),
-		"getRequestHeaders":                 getFuncMapLabel(label.TraefikFrontendRequestHeaders),
-		"hasResponseHeaders":                hasFuncService(label.TraefikFrontendResponseHeaders),
-		"getResponseHeaders":                getFuncMapLabel(label.TraefikFrontendResponseHeaders),
-		"hasAllowedHostsHeaders":            hasFuncService(label.TraefikFrontendAllowedHosts),
-		"getAllowedHostsHeaders":            getFuncServiceSliceStringLabel(label.TraefikFrontendAllowedHosts),
-		"hasHostsProxyHeaders":              hasFuncService(label.TraefikFrontendHostsProxyHeaders),
-		"getHostsProxyHeaders":              getFuncServiceSliceStringLabel(label.TraefikFrontendHostsProxyHeaders),
-		"hasSSLRedirectHeaders":             hasFuncService(label.TraefikFrontendSSLRedirect),
-		"getSSLRedirectHeaders":             getFuncBoolLabel(label.TraefikFrontendSSLRedirect, false),
-		"hasSSLTemporaryRedirectHeaders":    hasFuncService(label.TraefikFrontendSSLTemporaryRedirect),
-		"getSSLTemporaryRedirectHeaders":    getFuncBoolLabel(label.TraefikFrontendSSLTemporaryRedirect, false),
-		"hasSSLHostHeaders":                 hasFuncService(label.TraefikFrontendSSLHost),
-		"getSSLHostHeaders":                 getFuncServiceSliceStringLabel(label.TraefikFrontendSSLHost),
-		"hasSSLProxyHeaders":                hasFuncService(label.TraefikFrontendSSLProxyHeaders),
-		"getSSLProxyHeaders":                getFuncMapLabel(label.TraefikFrontendSSLProxyHeaders),
-		"hasSTSSecondsHeaders":              hasFuncService(label.TraefikFrontendSTSSeconds),
-		"getSTSSecondsHeaders":              getFuncInt64Label(label.TraefikFrontendSTSSeconds, 0),
-		"hasSTSIncludeSubdomainsHeaders":    hasFuncService(label.TraefikFrontendSTSIncludeSubdomains),
-		"getSTSIncludeSubdomainsHeaders":    getFuncBoolLabel(label.TraefikFrontendSTSIncludeSubdomains, false),
-		"hasSTSPreloadHeaders":              hasFuncService(label.TraefikFrontendSTSPreload),
-		"getSTSPreloadHeaders":              getFuncBoolLabel(label.TraefikFrontendSTSPreload, false),
-		"hasForceSTSHeaderHeaders":          hasFuncService(label.TraefikFrontendForceSTSHeader),
-		"getForceSTSHeaderHeaders":          getFuncBoolLabel(label.TraefikFrontendForceSTSHeader, false),
-		"hasFrameDenyHeaders":               hasFuncService(label.TraefikFrontendFrameDeny),
-		"getFrameDenyHeaders":               getFuncBoolLabel(label.TraefikFrontendFrameDeny, false),
-		"hasCustomFrameOptionsValueHeaders": hasFuncService(label.TraefikFrontendCustomFrameOptionsValue),
-		"getCustomFrameOptionsValueHeaders": getFuncServiceSliceStringLabel(label.TraefikFrontendCustomFrameOptionsValue),
-		"hasContentTypeNosniffHeaders":      hasFuncService(label.TraefikFrontendContentTypeNosniff),
-		"getContentTypeNosniffHeaders":      getFuncBoolLabel(label.TraefikFrontendContentTypeNosniff, false),
-		"hasBrowserXSSFilterHeaders":        hasFuncService(label.TraefikFrontendBrowserXSSFilter),
-		"getBrowserXSSFilterHeaders":        getFuncBoolLabel(label.TraefikFrontendBrowserXSSFilter, false),
-		"hasContentSecurityPolicyHeaders":   hasFuncService(label.TraefikFrontendContentSecurityPolicy),
-		"getContentSecurityPolicyHeaders":   getFuncServiceSliceStringLabel(label.TraefikFrontendContentSecurityPolicy),
-		"hasPublicKeyHeaders":               hasFuncService(label.TraefikFrontendPublicKey),
-		"getPublicKeyHeaders":               getFuncServiceSliceStringLabel(label.TraefikFrontendPublicKey),
-		"hasReferrerPolicyHeaders":          hasFuncService(label.TraefikFrontendReferrerPolicy),
-		"getReferrerPolicyHeaders":          getFuncServiceSliceStringLabel(label.TraefikFrontendReferrerPolicy),
-		"hasIsDevelopmentHeaders":           hasFuncService(label.TraefikFrontendIsDevelopment),
-		"getIsDevelopmentHeaders":           getFuncBoolLabel(label.TraefikFrontendIsDevelopment, false),
+		"getHeaders":  getHeaders,
+		"getRedirect": getRedirect,
 
 		// SF Service Grouping
 		"getGroupedServices": getFuncServicesGroupedByLabel(traefikSFGroupName),
@@ -134,34 +78,6 @@ func isStateful(service ServiceItemExtended) bool {
 
 func isStateless(service ServiceItemExtended) bool {
 	return service.ServiceKind == "Stateless"
-}
-
-func hasRedirect(service ServiceItemExtended) bool {
-	return label.Has(service.Labels, label.TraefikFrontendRedirectEntryPoint) ||
-		label.Has(service.Labels, label.TraefikFrontendRedirectReplacement) && label.Has(service.Labels, label.TraefikFrontendRedirectRegex)
-}
-
-func hasLoadBalancerLabel(service ServiceItemExtended) bool {
-	method := label.Has(service.Labels, label.TraefikBackendLoadBalancerMethod)
-	sticky := label.Has(service.Labels, label.TraefikBackendLoadBalancerSticky)
-	stickiness := label.Has(service.Labels, label.TraefikBackendLoadBalancerStickiness)
-	cookieName := label.Has(service.Labels, label.TraefikBackendLoadBalancerStickinessCookieName)
-	return method || sticky || stickiness || cookieName
-}
-
-func hasMaxConnLabels(service ServiceItemExtended) bool {
-	mca := label.Has(service.Labels, label.TraefikBackendMaxConnAmount)
-	mcef := label.Has(service.Labels, label.TraefikBackendMaxConnExtractorFunc)
-	return mca && mcef
-}
-
-func hasHeaders(service ServiceItemExtended) bool {
-	for key := range service.Labels {
-		if strings.HasPrefix(key, label.TraefikFrontendHeaders) {
-			return true
-		}
-	}
-	return false
 }
 
 func getBackendName(service ServiceItemExtended, partition PartitionItemExtended) string {
@@ -279,4 +195,127 @@ func decodeEndpointData(endpointData string) (map[string]string, error) {
 	}
 
 	return endpoints, nil
+}
+
+func getHeaders(service ServiceItemExtended) *types.Headers {
+	headers := &types.Headers{
+		CustomRequestHeaders:    label.GetMapValue(service.Labels, label.TraefikFrontendRequestHeaders),
+		CustomResponseHeaders:   label.GetMapValue(service.Labels, label.TraefikFrontendResponseHeaders),
+		SSLProxyHeaders:         label.GetMapValue(service.Labels, label.TraefikFrontendSSLProxyHeaders),
+		AllowedHosts:            label.GetSliceStringValue(service.Labels, label.TraefikFrontendAllowedHosts),
+		HostsProxyHeaders:       label.GetSliceStringValue(service.Labels, label.TraefikFrontendHostsProxyHeaders),
+		STSSeconds:              label.GetInt64Value(service.Labels, label.TraefikFrontendSTSSeconds, 0),
+		SSLRedirect:             label.GetBoolValue(service.Labels, label.TraefikFrontendSSLRedirect, false),
+		SSLTemporaryRedirect:    label.GetBoolValue(service.Labels, label.TraefikFrontendSSLTemporaryRedirect, false),
+		STSIncludeSubdomains:    label.GetBoolValue(service.Labels, label.TraefikFrontendSTSIncludeSubdomains, false),
+		STSPreload:              label.GetBoolValue(service.Labels, label.TraefikFrontendSTSPreload, false),
+		ForceSTSHeader:          label.GetBoolValue(service.Labels, label.TraefikFrontendForceSTSHeader, false),
+		FrameDeny:               label.GetBoolValue(service.Labels, label.TraefikFrontendFrameDeny, false),
+		ContentTypeNosniff:      label.GetBoolValue(service.Labels, label.TraefikFrontendContentTypeNosniff, false),
+		BrowserXSSFilter:        label.GetBoolValue(service.Labels, label.TraefikFrontendBrowserXSSFilter, false),
+		IsDevelopment:           label.GetBoolValue(service.Labels, label.TraefikFrontendIsDevelopment, false),
+		SSLHost:                 label.GetStringValue(service.Labels, label.TraefikFrontendSSLHost, ""),
+		CustomFrameOptionsValue: label.GetStringValue(service.Labels, label.TraefikFrontendCustomFrameOptionsValue, ""),
+		ContentSecurityPolicy:   label.GetStringValue(service.Labels, label.TraefikFrontendContentSecurityPolicy, ""),
+		PublicKey:               label.GetStringValue(service.Labels, label.TraefikFrontendPublicKey, ""),
+		ReferrerPolicy:          label.GetStringValue(service.Labels, label.TraefikFrontendReferrerPolicy, ""),
+		CustomBrowserXSSValue:   label.GetStringValue(service.Labels, label.TraefikFrontendCustomBrowserXSSValue, ""),
+	}
+
+	if !headers.HasSecureHeadersDefined() && !headers.HasCustomHeadersDefined() {
+		return nil
+	}
+
+	return headers
+}
+
+func getRedirect(service ServiceItemExtended) *types.Redirect {
+	permanent := label.GetBoolValue(service.Labels, label.TraefikFrontendRedirectPermanent, false)
+
+	if label.Has(service.Labels, label.TraefikFrontendRedirectEntryPoint) {
+		return &types.Redirect{
+			EntryPoint: label.GetStringValue(service.Labels, label.TraefikFrontendRedirectEntryPoint, ""),
+			Permanent:  permanent,
+		}
+	}
+
+	if label.Has(service.Labels, label.TraefikFrontendRedirectRegex) &&
+		label.Has(service.Labels, label.TraefikFrontendRedirectReplacement) {
+		return &types.Redirect{
+			Regex:       label.GetStringValue(service.Labels, label.TraefikFrontendRedirectRegex, ""),
+			Replacement: label.GetStringValue(service.Labels, label.TraefikFrontendRedirectReplacement, ""),
+			Permanent:   permanent,
+		}
+	}
+
+	return nil
+}
+
+func getMaxConn(service ServiceItemExtended) *types.MaxConn {
+	amount := label.GetInt64Value(service.Labels, label.TraefikBackendMaxConnAmount, math.MinInt64)
+	extractorFunc := label.GetStringValue(service.Labels, label.TraefikBackendMaxConnExtractorFunc, label.DefaultBackendMaxconnExtractorFunc)
+
+	if amount == math.MinInt64 || len(extractorFunc) == 0 {
+		return nil
+	}
+
+	return &types.MaxConn{
+		Amount:        amount,
+		ExtractorFunc: extractorFunc,
+	}
+}
+
+func getHealthCheck(service ServiceItemExtended) *types.HealthCheck {
+	path := label.GetStringValue(service.Labels, label.TraefikBackendHealthCheckPath, "")
+	if len(path) == 0 {
+		return nil
+	}
+
+	port := label.GetIntValue(service.Labels, label.TraefikBackendHealthCheckPort, label.DefaultBackendHealthCheckPort)
+	interval := label.GetStringValue(service.Labels, label.TraefikBackendHealthCheckInterval, "")
+
+	return &types.HealthCheck{
+		Path:     path,
+		Port:     port,
+		Interval: interval,
+	}
+}
+
+func getCircuitBreaker(service ServiceItemExtended) *types.CircuitBreaker {
+	circuitBreaker := label.GetStringValue(service.Labels, label.TraefikBackendCircuitBreakerExpression, "")
+	if len(circuitBreaker) == 0 {
+		return nil
+	}
+	return &types.CircuitBreaker{Expression: circuitBreaker}
+}
+
+func getLoadBalancer(service ServiceItemExtended) *types.LoadBalancer {
+	if !label.HasPrefix(service.Labels, label.TraefikBackendLoadBalancer) {
+		return nil
+	}
+
+	method := label.GetStringValue(service.Labels, label.TraefikBackendLoadBalancerMethod, label.DefaultBackendLoadBalancerMethod)
+
+	lb := &types.LoadBalancer{
+		Method: method,
+		Sticky: getSticky(service),
+	}
+
+	if label.GetBoolValue(service.Labels, label.TraefikBackendLoadBalancerStickiness, false) {
+		cookieName := label.GetStringValue(service.Labels, label.TraefikBackendLoadBalancerStickinessCookieName, label.DefaultBackendLoadbalancerStickinessCookieName)
+		lb.Stickiness = &types.Stickiness{CookieName: cookieName}
+	}
+
+	return lb
+}
+
+// TODO: Deprecated
+// replaced by Stickiness
+// Deprecated
+func getSticky(service ServiceItemExtended) bool {
+	if label.Has(service.Labels, label.TraefikBackendLoadBalancerSticky) {
+		log.Warnf("Deprecated configuration found: %s. Please use %s.", label.TraefikBackendLoadBalancerSticky, label.TraefikBackendLoadBalancerStickiness)
+	}
+
+	return label.GetBoolValue(service.Labels, label.TraefikBackendLoadBalancerSticky, false)
 }

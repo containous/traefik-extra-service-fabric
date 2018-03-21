@@ -3,7 +3,6 @@ package servicefabric
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var apps = &sf.ApplicationItemsPage{
@@ -29,6 +30,7 @@ var apps = &sf.ApplicationItemsPage{
 		},
 	},
 }
+
 var services = &sf.ServiceItemsPage{
 	ContinuationToken: nil,
 	Items: []sf.ServiceItem{
@@ -68,6 +70,7 @@ var partitions = &sf.PartitionItemsPage{
 		},
 	},
 }
+
 var instances = &sf.InstanceItemsPage{
 	ContinuationToken: nil,
 	Items: []sf.InstanceItem{
@@ -82,7 +85,8 @@ var instances = &sf.InstanceItemsPage{
 			},
 			ID: "1",
 		},
-		{ //Include a failed service in test data
+		// Include a failed service in test data
+		{
 			ReplicaItemBase: &sf.ReplicaItemBase{
 				Address:                      `{"Endpoints":{"":"http://anotheraddress:8081"}}`,
 				HealthState:                  "Error",
@@ -103,7 +107,6 @@ var labels = map[string]string{
 // TestUpdateconfig - This test ensures the provider returns a configuration message to
 // the configuration channel when run.
 func TestUpdateConfig(t *testing.T) {
-
 	client := &clientMock{
 		applications:           apps,
 		services:               services,
@@ -121,9 +124,7 @@ func TestUpdateConfig(t *testing.T) {
 	defer pool.Stop()
 
 	err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	timeout := make(chan string, 1)
 	go func() {
@@ -139,85 +140,45 @@ func TestUpdateConfig(t *testing.T) {
 	}
 }
 
-func requestConfig(provider Provider, client *clientMock) (types.Configuration, error) {
-	config, err := provider.buildConfiguration(client)
-
-	if err != nil {
-		return types.Configuration{}, err
-	}
-
-	if config == nil {
-		return types.Configuration{}, errors.New("Returned nil config")
-	}
-
-	return *config, nil
-}
-
 // TestServicesPresentInConfig tests that the basic services provide by SF
 // are return in the configuration object
 func TestServicesPresentInConfig(t *testing.T) {
 	provider := Provider{}
+
 	client := &clientMock{
-		applications: apps,
-		services:     services,
-		partitions:   partitions,
-		replicas:     nil,
-		instances:    instances,
-		// getServicelabelsResult: labels,
+		applications:                 apps,
+		services:                     services,
+		partitions:                   partitions,
+		replicas:                     nil,
+		instances:                    instances,
 		getServiceExtensionMapResult: labels,
 		expectedPropertyName:         services.Items[0].ID,
 	}
 
-	config, err := requestConfig(provider, client)
-	if err != nil {
-		t.Error(err)
-	}
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
 
-	testCases := []struct {
-		desc  string
-		check func(types.Configuration) bool
-	}{
-		{
-			desc:  "Has 1 Frontend",
-			check: func(c types.Configuration) bool { return len(c.Frontends) == 1 },
-		},
-		{
-			desc:  "Has 1 backend",
-			check: func(c types.Configuration) bool { return len(c.Backends) == 1 },
-		},
-		{
-			desc: "Backend for 'fabric:/TestApplication/TestService' exists",
-			check: func(c types.Configuration) bool {
-				_, exists := config.Backends["fabric:/TestApplication/TestService"]
-				return exists
+	require.NotNil(t, config, "configuration")
+
+	expected := &types.Configuration{
+		Backends: map[string]*types.Backend{
+			"fabric:/TestApplication/TestService": {
+				Servers: map[string]types.Server{
+					"1": {
+						URL:    "http://localhost:8081",
+						Weight: 1,
+					},
+				},
 			},
 		},
-		{
-			desc: "Backend has 1 server",
-			check: func(c types.Configuration) bool {
-				backend := config.Backends["fabric:/TestApplication/TestService"]
-				return len(backend.Servers) == 1
-			},
-		},
-		{
-			desc: "Backend server has url 'http://localhost:8081'",
-			check: func(c types.Configuration) bool {
-				backend := config.Backends["fabric:/TestApplication/TestService"]
-				return backend.Servers["1"].URL == "http://localhost:8081"
+		Frontends: map[string]*types.Frontend{
+			"frontend-fabric:/TestApplication/TestService": {
+				Backend:        "fabric:/TestApplication/TestService",
+				PassHostHeader: true,
 			},
 		},
 	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			if !test.check(config) {
-				t.Errorf("Check failed: %v", getJSON(config))
-			}
-		})
-	}
+	assert.Equal(t, expected, config)
 }
 
 // nolint: gocyclo
@@ -225,7 +186,7 @@ func TestFrontendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		labels   map[string]string
-		validate func(types.Frontend) bool
+		validate func(*testing.T, *types.Frontend)
 	}{
 		{
 			desc: "Has passHostHeader enabled",
@@ -233,7 +194,9 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                 "true",
 				label.TraefikFrontendPassHostHeader: "true",
 			},
-			validate: func(f types.Frontend) bool { return f.PassHostHeader },
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.True(t, f.PassHostHeader)
+			},
 		},
 		{
 			desc: "Has passHostHeader disabled",
@@ -241,7 +204,9 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                 "true",
 				label.TraefikFrontendPassHostHeader: "false",
 			},
-			validate: func(f types.Frontend) bool { return !f.PassHostHeader },
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.False(t, f.PassHostHeader)
+			},
 		},
 		{
 			desc: "Has whitelistSourceRange set",
@@ -249,11 +214,11 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                       "true",
 				label.TraefikFrontendWhitelistSourceRange: "10.0.0.1, 10.0.0.2",
 			},
-			validate: func(f types.Frontend) bool {
-				if len(f.WhitelistSourceRange) != 2 {
-					return false
-				}
-				return f.WhitelistSourceRange[0] == "10.0.0.1" && f.WhitelistSourceRange[1] == "10.0.0.2"
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.WhitelistSourceRange, 2)
+
+				expected := []string{"10.0.0.1", "10.0.0.2"}
+				assert.EqualValues(t, expected, f.WhitelistSourceRange)
 			},
 		},
 		{
@@ -262,26 +227,34 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:           "true",
 				label.TraefikFrontendPriority: "13",
 			},
-			validate: func(f types.Frontend) bool { return f.Priority == 13 },
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Equal(t, f.Priority, 13)
+			},
 		},
 		{
 			desc: "Has basicAuth set",
 			labels: map[string]string{
 				label.TraefikEnable:            "true",
-				label.TraefikFrontendAuthBasic: "USER1:HASH1, USER2:HASH2",
+				label.TraefikFrontendAuthBasic: "USER1:HASH1, USER1:HASH1",
 			},
-			validate: func(f types.Frontend) bool {
-				return len(f.BasicAuth) == 2 && f.BasicAuth[0] == "USER1:HASH1"
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.BasicAuth, 2)
+
+				expected := []string{"USER1:HASH1", "USER1:HASH1"}
+				assert.EqualValues(t, expected, f.BasicAuth)
 			},
 		},
 		{
-			desc: "Has entrypoints set",
+			desc: "Has frontend entry points set",
 			labels: map[string]string{
 				label.TraefikEnable:              "true",
 				label.TraefikFrontendEntryPoints: "Barry, Bob",
 			},
-			validate: func(f types.Frontend) bool {
-				return len(f.EntryPoints) == 2 && f.EntryPoints[0] == "Barry" && f.EntryPoints[1] == "Bob"
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.EntryPoints, 2)
+
+				expected := []string{"Barry", "Bob"}
+				assert.EqualValues(t, expected, f.EntryPoints)
 			},
 		},
 		{
@@ -290,7 +263,9 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:              "true",
 				label.TraefikFrontendPassTLSCert: "true",
 			},
-			validate: func(f types.Frontend) bool { return f.PassTLSCert },
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.True(t, f.PassTLSCert)
+			},
 		},
 		{
 			desc: "Has passTLSCert disabled",
@@ -298,7 +273,9 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:              "true",
 				label.TraefikFrontendPassTLSCert: "false",
 			},
-			validate: func(f types.Frontend) bool { return !f.PassTLSCert },
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.False(t, f.PassTLSCert)
+			},
 		},
 		{
 			desc: "Has rule set",
@@ -306,184 +283,64 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                    "true",
 				label.TraefikFrontendRule + ".default": "Path: /",
 			},
-			validate: func(f types.Frontend) bool {
-				return len(f.Routes) == 1 && f.Routes[label.TraefikFrontendRule+".default"].Rule == "Path: /"
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.Routes, 1)
+
+				expected := map[string]types.Route{
+					label.TraefikFrontendRule + ".default": {
+						Rule: "Path: /",
+					},
+				}
+				assert.Equal(t, expected, f.Routes)
 			},
 		},
 		{
-			desc: "Has SSLRedirectHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:              "true",
-				label.TraefikFrontendSSLRedirect: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.SSLRedirect
-			},
-		},
-		{
-			desc: "Has Temporary SSLRedirectHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                       "true",
-				label.TraefikFrontendSSLTemporaryRedirect: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.SSLTemporaryRedirect
-			},
-		},
-		//Todo: Is this behaviour correct "bob.bob.com" => "[bob.bob.com]"?
-		{
-			desc: "Has SSLHostHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:          "true",
-				label.TraefikFrontendSSLHost: "bob.bob.com",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.SSLHost == "[bob.bob.com]"
-			},
-		},
-		{
-			desc: "Has STSSecondsHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:             "true",
-				label.TraefikFrontendSTSSeconds: "1337",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.STSSeconds == 1337
-			},
-		},
-		{
-			desc: "Has STSIncludeSubdomainsHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                       "true",
-				label.TraefikFrontendSTSIncludeSubdomains: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.STSIncludeSubdomains
-			},
-		},
-		{
-			desc: "Has STSPreloadHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:             "true",
-				label.TraefikFrontendSTSPreload: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.STSPreload
-			},
-		},
-		{
-			desc: "Has hasForceSTSHeaderHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                 "true",
-				label.TraefikFrontendForceSTSHeader: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.ForceSTSHeader
-			},
-		},
-		{
-			desc: "Has hasForceSTSHeaderHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                 "true",
-				label.TraefikFrontendForceSTSHeader: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.ForceSTSHeader
-			},
-		},
-		{
-			desc: "Has FrameDeny enabled",
-			labels: map[string]string{
-				label.TraefikEnable:            "true",
-				label.TraefikFrontendFrameDeny: "true",
-			},
-			validate: func(f types.Frontend) bool { return f.Headers.FrameDeny },
-		},
-		{
-			desc: "Has FrameDeny disabled",
-			labels: map[string]string{
-				label.TraefikEnable:            "true",
-				label.TraefikFrontendFrameDeny: "false",
-			},
-			validate: func(f types.Frontend) bool { return !f.Headers.FrameDeny },
-		},
-		//Todo: Is this behaviour correct "SAMEORIGIN" => "[SAMEORIGIN]"?
-		{
-			desc: "hasCustomFrameOptionsValueHeaders",
+			desc: "Has Headers set",
 			labels: map[string]string{
 				label.TraefikEnable:                          "true",
+				label.TraefikFrontendSSLRedirect:             "true",
+				label.TraefikFrontendSSLTemporaryRedirect:    "true",
+				label.TraefikFrontendSSLHost:                 "bob.bob.com",
+				label.TraefikFrontendSTSSeconds:              "1337",
+				label.TraefikFrontendSTSIncludeSubdomains:    "true",
+				label.TraefikFrontendSTSPreload:              "true",
+				label.TraefikFrontendForceSTSHeader:          "true",
+				label.TraefikFrontendFrameDeny:               "true",
 				label.TraefikFrontendCustomFrameOptionsValue: "SAMEORIGIN",
+				label.TraefikFrontendContentTypeNosniff:      "true",
+				label.TraefikFrontendBrowserXSSFilter:        "true",
+				label.TraefikFrontendContentSecurityPolicy:   "plugin-types image/png application/pdf; sandbox",
+				label.TraefikFrontendPublicKey:               "somekeydata",
+				label.TraefikFrontendReferrerPolicy:          "same-origin",
+				label.TraefikFrontendIsDevelopment:           "true",
+				label.TraefikFrontendAllowedHosts:            "host1, host2",
+				label.TraefikFrontendSSLProxyHeaders:         "X-Testing:testing||X-Testing2:testing2",
 			},
-			validate: func(f types.Frontend) bool { return f.Headers.CustomFrameOptionsValue == "[SAMEORIGIN]" },
-		},
-		{
-			desc: "Has ContentTypeNosniffHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                     "true",
-				label.TraefikFrontendContentTypeNosniff: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.ContentTypeNosniff
-			},
-		},
-		{
-			desc: "Has BrowserXSSFilterHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                   "true",
-				label.TraefikFrontendBrowserXSSFilter: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.BrowserXSSFilter
-			},
-		},
-		{
-			desc: "Has ContentSecurityPolicyHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                        "true",
-				label.TraefikFrontendContentSecurityPolicy: "plugin-types image/png application/pdf; sandbox",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.ContentSecurityPolicy == "[plugin-types image/png application/pdf; sandbox]"
-			},
-		},
-		{
-			desc: "Has PublicKeyHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:            "true",
-				label.TraefikFrontendPublicKey: "somekeydata",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.PublicKey == "[somekeydata]"
-			},
-		},
-		{
-			desc: "Has ReferrerPolicyHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                 "true",
-				label.TraefikFrontendReferrerPolicy: "same-origin",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.ReferrerPolicy == "[same-origin]"
-			},
-		},
-		{
-			desc: "Has IsDevelopmentHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                "true",
-				label.TraefikFrontendIsDevelopment: "true",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.IsDevelopment
-			},
-		},
-		{
-			desc: "Has AllowedhostHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:               "true",
-				label.TraefikFrontendAllowedHosts: "host1, host2",
-			},
-			validate: func(f types.Frontend) bool {
-				return f.Headers.AllowedHosts[0] == "host1"
+			validate: func(t *testing.T, f *types.Frontend) {
+				expected := &types.Headers{
+					SSLProxyHeaders: map[string]string{
+						"X-Testing":  "testing",
+						"X-Testing2": "testing2",
+					},
+					AllowedHosts:            []string{"host1", "host2"},
+					HostsProxyHeaders:       nil,
+					SSLRedirect:             true,
+					SSLTemporaryRedirect:    true,
+					SSLHost:                 "bob.bob.com",
+					STSSeconds:              1337,
+					STSIncludeSubdomains:    true,
+					STSPreload:              true,
+					ForceSTSHeader:          true,
+					FrameDeny:               true,
+					CustomFrameOptionsValue: "SAMEORIGIN",
+					ContentTypeNosniff:      true,
+					BrowserXSSFilter:        true,
+					ContentSecurityPolicy:   "plugin-types image/png application/pdf; sandbox",
+					PublicKey:               "somekeydata",
+					ReferrerPolicy:          "same-origin",
+					IsDevelopment:           true,
+				}
+				assert.Equal(t, expected, f.Headers)
 			},
 		},
 		{
@@ -492,8 +349,14 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                 "true",
 				label.TraefikFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
-			validate: func(f types.Frontend) bool {
-				return len(f.Headers.CustomRequestHeaders) == 2 && f.Headers.CustomRequestHeaders["X-Testing"] == "testing"
+			validate: func(t *testing.T, f *types.Frontend) {
+				require.NotNil(t, f.Headers, "headers")
+
+				expected := map[string]string{
+					"X-Testing":  "testing",
+					"X-Testing2": "testing2",
+				}
+				assert.Equal(t, expected, f.Headers.CustomRequestHeaders)
 			},
 		},
 		{
@@ -502,18 +365,14 @@ func TestFrontendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                  "true",
 				label.TraefikFrontendResponseHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
-			validate: func(f types.Frontend) bool {
-				return len(f.Headers.CustomResponseHeaders) == 2 && f.Headers.CustomResponseHeaders["X-Testing"] == "testing"
-			},
-		},
-		{
-			desc: "Has SSLProxyHeaders set",
-			labels: map[string]string{
-				label.TraefikEnable:                  "true",
-				label.TraefikFrontendSSLProxyHeaders: "X-Testing:testing||X-Testing2:testing2",
-			},
-			validate: func(f types.Frontend) bool {
-				return len(f.Headers.SSLProxyHeaders) == 2 && f.Headers.SSLProxyHeaders["X-Testing"] == "testing"
+			validate: func(t *testing.T, f *types.Frontend) {
+				require.NotNil(t, f.Headers, "headers")
+
+				expected := map[string]string{
+					"X-Testing":  "testing",
+					"X-Testing2": "testing2",
+				}
+				assert.Equal(t, expected, f.Headers.CustomResponseHeaders)
 			},
 		},
 	}
@@ -522,7 +381,9 @@ func TestFrontendLabelConfig(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			provider := Provider{}
+
 			client := &clientMock{
 				applications:                 apps,
 				services:                     services,
@@ -532,22 +393,17 @@ func TestFrontendLabelConfig(t *testing.T) {
 				getServiceExtensionMapResult: test.labels,
 			}
 
-			config, err := requestConfig(provider, client)
-			if err != nil {
-				t.Error(err)
-			}
+			config, err := provider.buildConfiguration(client)
+			require.NoError(t, err)
 
-			if config.Frontends == nil || len(config.Frontends) != 1 {
-				t.Error("No frontends present in the config")
-			}
+			assert.NotEmpty(t, config.Frontends, "No frontends present in the configuration")
 
-			for _, frontend := range config.Frontends {
-				if frontend == nil {
-					t.Error("Frontend is nil")
-				}
-				if !test.validate(*frontend) {
+			for fname, frontend := range config.Frontends {
+				require.NotNil(t, frontend, "Frontend %s is nil", fname)
+
+				test.validate(t, frontend)
+				if t.Failed() {
 					t.Log(getJSON(frontend))
-					t.Fail()
 				}
 			}
 		})
@@ -559,29 +415,34 @@ func TestBackendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		labels   map[string]string
-		validate func(types.Backend) bool
+		validate func(*testing.T, *types.Backend)
 	}{
 		{
-			desc: "Has DRR Loadbalencer",
+			desc: "Has DRR LoadBalancer",
 			labels: map[string]string{
 				label.TraefikEnable:                    "true",
 				label.TraefikBackendLoadBalancerMethod: "drr",
 			},
-			validate: func(b types.Backend) bool { return b.LoadBalancer.Method == "drr" },
+			validate: func(t *testing.T, b *types.Backend) {
+				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
+				assert.Equal(t, "drr", b.LoadBalancer.Method)
+			},
 		},
 		{
-			desc: "Has healthcheck set",
+			desc: "Has health check set",
 			labels: map[string]string{
 				label.TraefikEnable:                     "true",
 				label.TraefikBackendHealthCheckPath:     "/hc",
 				label.TraefikBackendHealthCheckPort:     "9000",
 				label.TraefikBackendHealthCheckInterval: "1337s",
 			},
-			validate: func(b types.Backend) bool {
-				if b.HealthCheck == nil {
-					return false
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.HealthCheck{
+					Path:     "/hc",
+					Port:     9000,
+					Interval: "1337s",
 				}
-				return b.HealthCheck.Path == "/hc" && b.HealthCheck.Interval == "1337s"
+				assert.Equal(t, expected, b.HealthCheck)
 			},
 		},
 		{
@@ -590,31 +451,23 @@ func TestBackendLabelConfig(t *testing.T) {
 				label.TraefikEnable:                          "true",
 				label.TraefikBackendCircuitBreakerExpression: "NetworkErrorRatio() > 0.5",
 			},
-			validate: func(b types.Backend) bool {
-				if b.CircuitBreaker == nil {
-					return false
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.CircuitBreaker{
+					Expression: "NetworkErrorRatio() > 0.5",
 				}
-				return b.CircuitBreaker.Expression == "NetworkErrorRatio() > 0.5"
+				assert.Equal(t, expected, b.CircuitBreaker)
 			},
 		},
-		// {
-		// 	desc: "Has stickiness loadbalencer set with cookie name",
-		// 	labels: map[string]string{
-		// 		label.TraefikEnable:                                  "true",
-		// 		label.TraefikBackendLoadBalancerStickiness:           "true",
-		// 		label.TraefikBackendLoadBalancerStickinessCookieName: "stickycookie",
-		// 	},
-		// 	validate: func(b types.Backend) bool {
-		// 		return b.LoadBalancer.Stickiness != nil && b.LoadBalancer.Stickiness.CookieName == "stickycookie"
-		// 	},
-		// },
 		{
 			desc: "Has stickiness cookie set",
 			labels: map[string]string{
 				label.TraefikEnable:                        "true",
 				label.TraefikBackendLoadBalancerStickiness: "true",
 			},
-			validate: func(b types.Backend) bool { return b.LoadBalancer.Stickiness != nil },
+			validate: func(t *testing.T, b *types.Backend) {
+				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
+				assert.NotNil(t, b.LoadBalancer.Stickiness, "Stickiness")
+			},
 		},
 		{
 			desc: "Has maxconn amount and extractor func",
@@ -623,11 +476,12 @@ func TestBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendMaxConnAmount:        "1337",
 				label.TraefikBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
 			},
-			validate: func(b types.Backend) bool {
-				if b.MaxConn == nil {
-					return false
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.MaxConn{
+					Amount:        1337,
+					ExtractorFunc: "request.header.TEST_HEADER",
 				}
-				return b.MaxConn.Amount == 1337 && b.MaxConn.ExtractorFunc == "request.header.TEST_HEADER"
+				assert.Equal(t, expected, b.MaxConn)
 			},
 		},
 	}
@@ -636,7 +490,9 @@ func TestBackendLabelConfig(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			provider := Provider{}
+
 			client := &clientMock{
 				applications:                 apps,
 				services:                     services,
@@ -645,25 +501,18 @@ func TestBackendLabelConfig(t *testing.T) {
 				instances:                    instances,
 				getServiceExtensionMapResult: test.labels,
 			}
-			config, err := requestConfig(provider, client)
-			if err != nil {
-				t.Error(err)
-			}
-			if err != nil {
-				t.Error(err)
-			}
 
-			if len(config.Backends) != 1 {
-				t.Error("No backends present in the config")
-			}
+			config, err := provider.buildConfiguration(client)
+			require.NoError(t, err)
 
-			for _, backend := range config.Backends {
-				if backend == nil {
-					t.Error("backend is nil")
-				}
-				if !test.validate(*backend) {
+			assert.NotEmpty(t, config.Backends, "No backends present in the configuration")
+
+			for bname, backend := range config.Backends {
+				require.NotNil(t, backend, "Backend %s is nil", bname)
+
+				test.validate(t, backend)
+				if t.Failed() {
 					t.Log(getJSON(backend))
-					t.Fail()
 				}
 			}
 		})
@@ -675,6 +524,7 @@ func TestDisableLabelOverrides(t *testing.T) {
 		label.TraefikEnable:           "true",
 		traefikSFEnableLabelOverrides: "false",
 	}
+
 	propertyLabels := map[string]string{
 		"shouldnotexist": "true",
 	}
@@ -691,23 +541,13 @@ func TestDisableLabelOverrides(t *testing.T) {
 	}
 
 	res, err := getLabels(client, &services.Items[0], &apps.Items[0])
-
-	if err != nil {
-		t.Log(err)
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	_, exists := res["shouldnotexist"]
-	if exists {
-		t.Fail()
-	}
+	assert.False(t, exists)
 }
 
 func TestGroupedServicesFrontends(t *testing.T) {
-	groupName := "groupedbackends"
-	groupWeight := "154"
-
-	provider := Provider{}
 	client := &clientMock{
 		applications: apps,
 		services:     services,
@@ -716,48 +556,33 @@ func TestGroupedServicesFrontends(t *testing.T) {
 		instances:    instances,
 		getServiceExtensionMapResult: map[string]string{
 			label.TraefikEnable:  "true",
-			traefikSFGroupName:   groupName,
-			traefikSFGroupWeight: groupWeight,
+			traefikSFGroupName:   "groupedbackends",
+			traefikSFGroupWeight: "154",
 		},
 	}
-	config, err := requestConfig(provider, client)
-	if err != nil {
-		t.Error(err)
-	}
-	if err != nil {
-		t.Error(err)
+
+	provider := Provider{}
+
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
+
+	require.NotNil(t, config, "configuration")
+
+	expectedFrontends := map[string]*types.Frontend{
+		"frontend-fabric:/TestApplication/TestService": {
+			Backend:        "fabric:/TestApplication/TestService",
+			PassHostHeader: true,
+		},
+		"groupedbackends": {
+			Backend:  "groupedbackends",
+			Priority: 50,
+		},
 	}
 
-	if len(config.Frontends) != 2 {
-		t.Log(getJSON(config))
-		t.Log("Incorrect count of frontends present in the config")
-		t.FailNow()
-	}
-
-	if len(config.Backends) != 2 {
-		t.Log(getJSON(config))
-		t.Log("Incorrect count of backends present in the config")
-		t.FailNow()
-	}
-
-	frontend, exists := config.Frontends[groupName]
-
-	if !exists {
-		t.Log(getJSON(config))
-		t.Log("Missing frontend for grouped service")
-		t.FailNow()
-	}
-
-	if frontend.Priority == 50 && frontend.Backend == groupName {
-		t.Log("Frontend exists for group")
-	}
+	assert.Equal(t, expectedFrontends, config.Frontends)
 }
 
 func TestGroupedServicesBackends(t *testing.T) {
-	groupName := "groupedbackends"
-	groupWeight := "154"
-
-	provider := Provider{}
 	client := &clientMock{
 		applications: apps,
 		services:     services,
@@ -766,44 +591,37 @@ func TestGroupedServicesBackends(t *testing.T) {
 		instances:    instances,
 		getServiceExtensionMapResult: map[string]string{
 			label.TraefikEnable:  "true",
-			traefikSFGroupName:   groupName,
-			traefikSFGroupWeight: groupWeight,
+			traefikSFGroupName:   "groupedbackends",
+			traefikSFGroupWeight: "154",
 		},
 	}
-	config, err := requestConfig(provider, client)
-	if err != nil {
-		t.Error(err)
-	}
-	if err != nil {
-		t.Error(err)
-	}
 
-	if len(config.Backends) != 2 {
-		t.Log(getJSON(config))
-		t.Log("Incorrect count of backends present in the config")
-		t.FailNow()
-	}
+	provider := Provider{}
 
-	backend, exists := config.Backends[groupName]
-	if !exists {
-		t.Log(getJSON(config))
-		t.Log("Missing backend for grouped service")
-		t.FailNow()
-	}
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
 
-	if len(backend.Servers) != 1 {
-		t.Log(getJSON(config))
-		t.Log("Incorrect number of backend servers on grouped service")
-		t.FailNow()
-	}
+	require.NotNil(t, config, "configuration")
 
-	for _, server := range backend.Servers {
-		if server.Weight != 154 {
-			t.Log(getJSON(config))
-			t.Log("Incorrect weight on grouped service")
-			t.FailNow()
-		}
+	expected := map[string]*types.Backend{
+		"fabric:/TestApplication/TestService": {
+			Servers: map[string]types.Server{
+				"1": {
+					URL:    "http://localhost:8081",
+					Weight: 1,
+				},
+			},
+		},
+		"groupedbackends": {
+			Servers: map[string]types.Server{
+				"TestApplication/TestService-1": {
+					URL:    "http://localhost:8081",
+					Weight: 154,
+				},
+			},
+		},
 	}
+	assert.Equal(t, expected, config.Backends)
 }
 
 func TestIsPrimary(t *testing.T) {

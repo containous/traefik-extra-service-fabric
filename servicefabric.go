@@ -190,7 +190,7 @@ func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
 func getLabels(sfClient sfClient, service *sf.ServiceItem, app *sf.ApplicationItem) (map[string]string, error) {
 	labels, err := sfClient.GetServiceExtensionMap(service, app, traefikServiceFabricExtensionKey)
 	if err != nil {
-		log.Errorf("Error retreiving serviceExtensionMap: %v", err)
+		log.Errorf("Error retrieving serviceExtensionMap: %v", err)
 		return nil, err
 	}
 
