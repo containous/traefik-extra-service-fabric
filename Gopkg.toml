@@ -1,8 +1,8 @@
 ignored = ["github.com/containous/traefik/autogen/genstatic"]
 
 [[constraint]]
-  branch = "master"
   name = "github.com/jjcollinge/servicefabric"
+  revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
 
 [[constraint]]
   branch = "master"

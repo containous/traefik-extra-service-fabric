@@ -3,133 +3,118 @@ package servicefabric
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
+	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+var apps = &sf.ApplicationItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.ApplicationItem{
+		{
+			HealthState: "Ok",
+			ID:          "TestApplication",
+			Name:        "fabric:/TestApplication",
+			Parameters: []*sf.AppParameter{
+				{Key: "TraefikPublish", Value: "fabric:/TestApplication/TestService"},
+			},
+			Status:      "Ready",
+			TypeName:    "TestApplicationType",
+			TypeVersion: "1.0.0",
+		},
+	},
+}
+
+var services = &sf.ServiceItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.ServiceItem{
+		{
+			HasPersistedState: true,
+			HealthState:       "Ok",
+			ID:                "TestApplication/TestService",
+			IsServiceGroup:    false,
+			ManifestVersion:   "1.0.0",
+			Name:              "fabric:/TestApplication/TestService",
+			ServiceKind:       "Stateless",
+			ServiceStatus:     "Active",
+			TypeName:          "TestServiceType",
+		},
+	},
+}
+
+var partitions = &sf.PartitionItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.PartitionItem{
+		{
+			CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+				ConfigurationVersion: "12884901891",
+				DataLossVersion:      "131496928071680379",
+			},
+			HealthState:       "Ok",
+			MinReplicaSetSize: 1,
+			PartitionInformation: sf.PartitionInformation{
+				HighKey:              "9223372036854775807",
+				ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+				LowKey:               "-9223372036854775808",
+				ServicePartitionKind: "Int64Range",
+			},
+			PartitionStatus:      "Ready",
+			ServiceKind:          "Stateless",
+			TargetReplicaSetSize: 1,
+		},
+	},
+}
+
+var instances = &sf.InstanceItemsPage{
+	ContinuationToken: nil,
+	Items: []sf.InstanceItem{
+		{
+			ReplicaItemBase: &sf.ReplicaItemBase{
+				Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
+				HealthState:                  "Ok",
+				LastInBuildDurationInSeconds: "3",
+				NodeName:                     "_Node_0",
+				ReplicaStatus:                "Ready",
+				ServiceKind:                  "Stateless",
+			},
+			ID: "1",
+		},
+		// Include a failed service in test data
+		{
+			ReplicaItemBase: &sf.ReplicaItemBase{
+				Address:                      `{"Endpoints":{"":"http://anotheraddress:8081"}}`,
+				HealthState:                  "Error",
+				LastInBuildDurationInSeconds: "3",
+				NodeName:                     "_Node_0",
+				ReplicaStatus:                "Down", // status is currently down.
+				ServiceKind:                  "Stateless",
+			},
+			ID: "2",
+		},
+	},
+}
+
+var labels = map[string]string{
+	label.TraefikEnable: "true",
+}
+
+// TestUpdateconfig - This test ensures the provider returns a configuration message to
+// the configuration channel when run.
 func TestUpdateConfig(t *testing.T) {
-	apps := &sf.ApplicationItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.ApplicationItem{
-			{
-				HealthState: "Ok",
-				ID:          "TestApplication",
-				Name:        "fabric:/TestApplication",
-				Parameters: []*sf.AppParameter{
-					{Key: "TraefikPublish", Value: "fabric:/TestApplication/TestService"},
-				},
-				Status:      "Ready",
-				TypeName:    "TestApplicationType",
-				TypeVersion: "1.0.0",
-			},
-		},
-	}
-	services := &sf.ServiceItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.ServiceItem{
-			{
-				HasPersistedState: true,
-				HealthState:       "Ok",
-				ID:                "TestApplication/TestService",
-				IsServiceGroup:    false,
-				ManifestVersion:   "1.0.0",
-				Name:              "fabric:/TestApplication/TestService",
-				ServiceKind:       "Stateless",
-				ServiceStatus:     "Active",
-				TypeName:          "TestServiceType",
-			},
-		},
-	}
-	partitions := &sf.PartitionItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.PartitionItem{
-			{
-				CurrentConfigurationEpoch: sf.ConfigurationEpoch{
-					ConfigurationVersion: "12884901891",
-					DataLossVersion:      "131496928071680379",
-				},
-				HealthState:       "Ok",
-				MinReplicaSetSize: 1,
-				PartitionInformation: sf.PartitionInformation{
-					HighKey:              "9223372036854775807",
-					ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
-					LowKey:               "-9223372036854775808",
-					ServicePartitionKind: "Int64Range",
-				},
-				PartitionStatus:      "Ready",
-				ServiceKind:          "Stateless",
-				TargetReplicaSetSize: 1,
-			},
-		},
-	}
-	instances := &sf.InstanceItemsPage{
-		ContinuationToken: nil,
-		Items: []sf.InstanceItem{
-			{
-				ReplicaItemBase: &sf.ReplicaItemBase{
-					Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
-					HealthState:                  "Ok",
-					LastInBuildDurationInSeconds: "3",
-					NodeName:                     "_Node_0",
-					ReplicaStatus:                "Ready",
-					ServiceKind:                  "Stateless",
-				},
-				ID: "131497042182378182",
-			},
-		},
-	}
-
-	labels := map[string]string{
-		"expose":                      "true",
-		"frontend.rule.default":       "Path: /",
-		"backend.loadbalancer.method": "wrr",
-		"backend.circuitbreaker":      "NetworkErrorRatio() > 0.5",
-	}
-
 	client := &clientMock{
-		applications: apps,
-		services:     services,
-		partitions:   partitions,
-		replicas:     nil,
-		instances:    instances,
-		labels:       labels,
-	}
-	expected := types.ConfigMessage{
-		ProviderName: "servicefabric",
-		Configuration: &types.Configuration{
-			Frontends: map[string]*types.Frontend{
-				"fabric:/TestApplication/TestService": {
-					EntryPoints: []string{},
-					Backend:     "fabric:/TestApplication/TestService",
-					Routes: map[string]types.Route{
-						"frontend.rule.default": {
-							Rule: "Path: /",
-						},
-					},
-				},
-			},
-			Backends: map[string]*types.Backend{
-				"fabric:/TestApplication/TestService": {
-					LoadBalancer: &types.LoadBalancer{
-						Method: "wrr",
-					},
-					CircuitBreaker: &types.CircuitBreaker{
-						Expression: "NetworkErrorRatio() > 0.5",
-					},
-					Servers: map[string]types.Server{
-						"131497042182378182": {
-							URL:    "http://localhost:8081",
-							Weight: 1,
-						},
-					},
-				},
-			},
-		},
+		applications:           apps,
+		services:               services,
+		partitions:             partitions,
+		replicas:               nil,
+		instances:              instances,
+		getServicelabelsResult: labels,
+		expectedPropertyName:   services.Items[0].ID,
 	}
 
 	provider := Provider{}
@@ -139,9 +124,7 @@ func TestUpdateConfig(t *testing.T) {
 	defer pool.Stop()
 
 	err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	timeout := make(chan string, 1)
 	go func() {
@@ -150,16 +133,495 @@ func TestUpdateConfig(t *testing.T) {
 	}()
 
 	select {
-	case actual := <-configurationChan:
-		err := compareConfigurations(actual, expected)
-		if err != nil {
-			res, _ := json.Marshal(actual)
-			t.Log(string(res))
-			t.Error(err)
-		}
+	case <-configurationChan:
+		t.Log("Received configuration object")
 	case <-timeout:
 		t.Error("Provider failed to return configuration")
 	}
+}
+
+// TestServicesPresentInConfig tests that the basic services provide by SF
+// are return in the configuration object
+func TestServicesPresentInConfig(t *testing.T) {
+	provider := Provider{}
+
+	client := &clientMock{
+		applications:                 apps,
+		services:                     services,
+		partitions:                   partitions,
+		replicas:                     nil,
+		instances:                    instances,
+		getServiceExtensionMapResult: labels,
+		expectedPropertyName:         services.Items[0].ID,
+	}
+
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
+
+	require.NotNil(t, config, "configuration")
+
+	expected := &types.Configuration{
+		Backends: map[string]*types.Backend{
+			"fabric:/TestApplication/TestService": {
+				Servers: map[string]types.Server{
+					"1": {
+						URL:    "http://localhost:8081",
+						Weight: 1,
+					},
+				},
+			},
+		},
+		Frontends: map[string]*types.Frontend{
+			"frontend-fabric:/TestApplication/TestService": {
+				Backend:        "fabric:/TestApplication/TestService",
+				PassHostHeader: true,
+			},
+		},
+	}
+	assert.Equal(t, expected, config)
+}
+
+// nolint: gocyclo
+func TestFrontendLabelConfig(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		validate func(*testing.T, *types.Frontend)
+	}{
+		{
+			desc: "Has passHostHeader enabled",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendPassHostHeader: "true",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.True(t, f.PassHostHeader)
+			},
+		},
+		{
+			desc: "Has passHostHeader disabled",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendPassHostHeader: "false",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.False(t, f.PassHostHeader)
+			},
+		},
+		{
+			desc: "Has whitelistSourceRange set",
+			labels: map[string]string{
+				label.TraefikEnable:                       "true",
+				label.TraefikFrontendWhitelistSourceRange: "10.0.0.1, 10.0.0.2",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.WhitelistSourceRange, 2)
+
+				expected := []string{"10.0.0.1", "10.0.0.2"}
+				assert.EqualValues(t, expected, f.WhitelistSourceRange)
+			},
+		},
+		{
+			desc: "Has priority set",
+			labels: map[string]string{
+				label.TraefikEnable:           "true",
+				label.TraefikFrontendPriority: "13",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Equal(t, f.Priority, 13)
+			},
+		},
+		{
+			desc: "Has basicAuth set",
+			labels: map[string]string{
+				label.TraefikEnable:            "true",
+				label.TraefikFrontendAuthBasic: "USER1:HASH1, USER1:HASH1",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.BasicAuth, 2)
+
+				expected := []string{"USER1:HASH1", "USER1:HASH1"}
+				assert.EqualValues(t, expected, f.BasicAuth)
+			},
+		},
+		{
+			desc: "Has frontend entry points set",
+			labels: map[string]string{
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendEntryPoints: "Barry, Bob",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.EntryPoints, 2)
+
+				expected := []string{"Barry", "Bob"}
+				assert.EqualValues(t, expected, f.EntryPoints)
+			},
+		},
+		{
+			desc: "Has passTLSCert enabled",
+			labels: map[string]string{
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendPassTLSCert: "true",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.True(t, f.PassTLSCert)
+			},
+		},
+		{
+			desc: "Has passTLSCert disabled",
+			labels: map[string]string{
+				label.TraefikEnable:              "true",
+				label.TraefikFrontendPassTLSCert: "false",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.False(t, f.PassTLSCert)
+			},
+		},
+		{
+			desc: "Has rule set",
+			labels: map[string]string{
+				label.TraefikEnable:                    "true",
+				label.TraefikFrontendRule + ".default": "Path: /",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				assert.Len(t, f.Routes, 1)
+
+				expected := map[string]types.Route{
+					label.TraefikFrontendRule + ".default": {
+						Rule: "Path: /",
+					},
+				}
+				assert.Equal(t, expected, f.Routes)
+			},
+		},
+		{
+			desc: "Has Headers set",
+			labels: map[string]string{
+				label.TraefikEnable:                          "true",
+				label.TraefikFrontendSSLRedirect:             "true",
+				label.TraefikFrontendSSLTemporaryRedirect:    "true",
+				label.TraefikFrontendSSLHost:                 "bob.bob.com",
+				label.TraefikFrontendSTSSeconds:              "1337",
+				label.TraefikFrontendSTSIncludeSubdomains:    "true",
+				label.TraefikFrontendSTSPreload:              "true",
+				label.TraefikFrontendForceSTSHeader:          "true",
+				label.TraefikFrontendFrameDeny:               "true",
+				label.TraefikFrontendCustomFrameOptionsValue: "SAMEORIGIN",
+				label.TraefikFrontendContentTypeNosniff:      "true",
+				label.TraefikFrontendBrowserXSSFilter:        "true",
+				label.TraefikFrontendContentSecurityPolicy:   "plugin-types image/png application/pdf; sandbox",
+				label.TraefikFrontendPublicKey:               "somekeydata",
+				label.TraefikFrontendReferrerPolicy:          "same-origin",
+				label.TraefikFrontendIsDevelopment:           "true",
+				label.TraefikFrontendAllowedHosts:            "host1, host2",
+				label.TraefikFrontendSSLProxyHeaders:         "X-Testing:testing||X-Testing2:testing2",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				expected := &types.Headers{
+					SSLProxyHeaders: map[string]string{
+						"X-Testing":  "testing",
+						"X-Testing2": "testing2",
+					},
+					AllowedHosts:            []string{"host1", "host2"},
+					HostsProxyHeaders:       nil,
+					SSLRedirect:             true,
+					SSLTemporaryRedirect:    true,
+					SSLHost:                 "bob.bob.com",
+					STSSeconds:              1337,
+					STSIncludeSubdomains:    true,
+					STSPreload:              true,
+					ForceSTSHeader:          true,
+					FrameDeny:               true,
+					CustomFrameOptionsValue: "SAMEORIGIN",
+					ContentTypeNosniff:      true,
+					BrowserXSSFilter:        true,
+					ContentSecurityPolicy:   "plugin-types image/png application/pdf; sandbox",
+					PublicKey:               "somekeydata",
+					ReferrerPolicy:          "same-origin",
+					IsDevelopment:           true,
+				}
+				assert.Equal(t, expected, f.Headers)
+			},
+		},
+		{
+			desc: "Has RequestHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                 "true",
+				label.TraefikFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				require.NotNil(t, f.Headers, "headers")
+
+				expected := map[string]string{
+					"X-Testing":  "testing",
+					"X-Testing2": "testing2",
+				}
+				assert.Equal(t, expected, f.Headers.CustomRequestHeaders)
+			},
+		},
+		{
+			desc: "Has ResponseHeaders set",
+			labels: map[string]string{
+				label.TraefikEnable:                  "true",
+				label.TraefikFrontendResponseHeaders: "X-Testing:testing||X-Testing2:testing2",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				require.NotNil(t, f.Headers, "headers")
+
+				expected := map[string]string{
+					"X-Testing":  "testing",
+					"X-Testing2": "testing2",
+				}
+				assert.Equal(t, expected, f.Headers.CustomResponseHeaders)
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			provider := Provider{}
+
+			client := &clientMock{
+				applications:                 apps,
+				services:                     services,
+				partitions:                   partitions,
+				replicas:                     nil,
+				instances:                    instances,
+				getServiceExtensionMapResult: test.labels,
+			}
+
+			config, err := provider.buildConfiguration(client)
+			require.NoError(t, err)
+
+			assert.NotEmpty(t, config.Frontends, "No frontends present in the configuration")
+
+			for fname, frontend := range config.Frontends {
+				require.NotNil(t, frontend, "Frontend %s is nil", fname)
+
+				test.validate(t, frontend)
+				if t.Failed() {
+					t.Log(getJSON(frontend))
+				}
+			}
+		})
+	}
+}
+
+// nolint: gocyclo
+func TestBackendLabelConfig(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		validate func(*testing.T, *types.Backend)
+	}{
+		{
+			desc: "Has DRR LoadBalancer",
+			labels: map[string]string{
+				label.TraefikEnable:                    "true",
+				label.TraefikBackendLoadBalancerMethod: "drr",
+			},
+			validate: func(t *testing.T, b *types.Backend) {
+				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
+				assert.Equal(t, "drr", b.LoadBalancer.Method)
+			},
+		},
+		{
+			desc: "Has health check set",
+			labels: map[string]string{
+				label.TraefikEnable:                     "true",
+				label.TraefikBackendHealthCheckPath:     "/hc",
+				label.TraefikBackendHealthCheckPort:     "9000",
+				label.TraefikBackendHealthCheckInterval: "1337s",
+			},
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.HealthCheck{
+					Path:     "/hc",
+					Port:     9000,
+					Interval: "1337s",
+				}
+				assert.Equal(t, expected, b.HealthCheck)
+			},
+		},
+		{
+			desc: "Has circuit breaker set",
+			labels: map[string]string{
+				label.TraefikEnable:                          "true",
+				label.TraefikBackendCircuitBreakerExpression: "NetworkErrorRatio() > 0.5",
+			},
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.CircuitBreaker{
+					Expression: "NetworkErrorRatio() > 0.5",
+				}
+				assert.Equal(t, expected, b.CircuitBreaker)
+			},
+		},
+		{
+			desc: "Has stickiness cookie set",
+			labels: map[string]string{
+				label.TraefikEnable:                        "true",
+				label.TraefikBackendLoadBalancerStickiness: "true",
+			},
+			validate: func(t *testing.T, b *types.Backend) {
+				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
+				assert.NotNil(t, b.LoadBalancer.Stickiness, "Stickiness")
+			},
+		},
+		{
+			desc: "Has maxconn amount and extractor func",
+			labels: map[string]string{
+				label.TraefikEnable:                      "true",
+				label.TraefikBackendMaxConnAmount:        "1337",
+				label.TraefikBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
+			},
+			validate: func(t *testing.T, b *types.Backend) {
+				expected := &types.MaxConn{
+					Amount:        1337,
+					ExtractorFunc: "request.header.TEST_HEADER",
+				}
+				assert.Equal(t, expected, b.MaxConn)
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			provider := Provider{}
+
+			client := &clientMock{
+				applications:                 apps,
+				services:                     services,
+				partitions:                   partitions,
+				replicas:                     nil,
+				instances:                    instances,
+				getServiceExtensionMapResult: test.labels,
+			}
+
+			config, err := provider.buildConfiguration(client)
+			require.NoError(t, err)
+
+			assert.NotEmpty(t, config.Backends, "No backends present in the configuration")
+
+			for bname, backend := range config.Backends {
+				require.NotNil(t, backend, "Backend %s is nil", bname)
+
+				test.validate(t, backend)
+				if t.Failed() {
+					t.Log(getJSON(backend))
+				}
+			}
+		})
+	}
+}
+
+func TestDisableLabelOverrides(t *testing.T) {
+	extensionLabels := map[string]string{
+		label.TraefikEnable:           "true",
+		traefikSFEnableLabelOverrides: "false",
+	}
+
+	propertyLabels := map[string]string{
+		"shouldnotexist": "true",
+	}
+
+	client := &clientMock{
+		applications:                 apps,
+		services:                     services,
+		partitions:                   partitions,
+		replicas:                     nil,
+		instances:                    instances,
+		getPropertiesResult:          propertyLabels,
+		getServiceExtensionMapResult: extensionLabels,
+		expectedPropertyName:         services.Items[0].ID,
+	}
+
+	res, err := getLabels(client, &services.Items[0], &apps.Items[0])
+	require.NoError(t, err)
+
+	_, exists := res["shouldnotexist"]
+	assert.False(t, exists)
+}
+
+func TestGroupedServicesFrontends(t *testing.T) {
+	client := &clientMock{
+		applications: apps,
+		services:     services,
+		partitions:   partitions,
+		replicas:     nil,
+		instances:    instances,
+		getServiceExtensionMapResult: map[string]string{
+			label.TraefikEnable:  "true",
+			traefikSFGroupName:   "groupedbackends",
+			traefikSFGroupWeight: "154",
+		},
+	}
+
+	provider := Provider{}
+
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
+
+	require.NotNil(t, config, "configuration")
+
+	expectedFrontends := map[string]*types.Frontend{
+		"frontend-fabric:/TestApplication/TestService": {
+			Backend:        "fabric:/TestApplication/TestService",
+			PassHostHeader: true,
+		},
+		"groupedbackends": {
+			Backend:  "groupedbackends",
+			Priority: 50,
+		},
+	}
+
+	assert.Equal(t, expectedFrontends, config.Frontends)
+}
+
+func TestGroupedServicesBackends(t *testing.T) {
+	client := &clientMock{
+		applications: apps,
+		services:     services,
+		partitions:   partitions,
+		replicas:     nil,
+		instances:    instances,
+		getServiceExtensionMapResult: map[string]string{
+			label.TraefikEnable:  "true",
+			traefikSFGroupName:   "groupedbackends",
+			traefikSFGroupWeight: "154",
+		},
+	}
+
+	provider := Provider{}
+
+	config, err := provider.buildConfiguration(client)
+	require.NoError(t, err)
+
+	require.NotNil(t, config, "configuration")
+
+	expected := map[string]*types.Backend{
+		"fabric:/TestApplication/TestService": {
+			Servers: map[string]types.Server{
+				"1": {
+					URL:    "http://localhost:8081",
+					Weight: 1,
+				},
+			},
+		},
+		"groupedbackends": {
+			Servers: map[string]types.Server{
+				"TestApplication/TestService-1": {
+					URL:    "http://localhost:8081",
+					Weight: 154,
+				},
+			},
+		},
+	}
+	assert.Equal(t, expected, config.Backends)
 }
 
 func TestIsPrimary(t *testing.T) {
@@ -286,6 +748,54 @@ func TestIsHealthy(t *testing.T) {
 	}
 }
 
+func TestIsStateX(t *testing.T) {
+	testCases := []struct {
+		desc              string
+		serviceItem       ServiceItemExtended
+		expectedStateless bool
+		expectedStateful  bool
+	}{
+		{
+			desc: "With Stateful service",
+			serviceItem: ServiceItemExtended{
+				ServiceItem: sf.ServiceItem{
+					ServiceKind: "Stateful",
+				},
+			},
+			expectedStateless: false,
+			expectedStateful:  true,
+		},
+		{
+			desc: "With Stateless service",
+			serviceItem: ServiceItemExtended{
+				ServiceItem: sf.ServiceItem{
+					ServiceKind: "Stateless",
+				},
+			},
+			expectedStateless: true,
+			expectedStateful:  false,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			isStatefulResult := isStateful(test.serviceItem)
+			isStatelessResult := isStateless(test.serviceItem)
+
+			if isStatefulResult != test.expectedStateful {
+				t.Errorf("Failed isStateful. Got %v, expected %v", isStatefulResult, test.expectedStateful)
+			}
+
+			if isStatelessResult != test.expectedStateless {
+				t.Errorf("Failed isStateless. Got %v, expected %v", isStatelessResult, test.expectedStateless)
+			}
+		})
+	}
+}
+
 func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	testCases := []struct {
 		desc             string
@@ -332,45 +842,10 @@ func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	}
 }
 
-func compareConfigurations(actual, expected types.ConfigMessage) error {
-	if actual.ProviderName == expected.ProviderName {
-		if len(actual.Configuration.Frontends) == len(expected.Configuration.Frontends) {
-			if len(actual.Configuration.Backends) == len(expected.Configuration.Backends) {
-				actualFrontends, err := json.Marshal(actual.Configuration.Frontends)
-				if err != nil {
-					return err
-				}
-				actualFrontendsStr := string(actualFrontends)
-
-				expectedFrontends, err := json.Marshal(expected.Configuration.Frontends)
-				if err != nil {
-					return err
-				}
-				expectedFrontendsStr := string(expectedFrontends)
-
-				if actualFrontendsStr != expectedFrontendsStr {
-					return fmt.Errorf("backend configuration differs from expected configuration: got %q, want %q", actualFrontendsStr, expectedFrontendsStr)
-				}
-
-				actualBackends, err := json.Marshal(actual.Configuration.Backends)
-				if err != nil {
-					return err
-				}
-				actualBackendsStr := string(actualBackends)
-				expectedBackends, err := json.Marshal(expected.Configuration.Backends)
-				if err != nil {
-					return err
-				}
-				expectedBackendsStr := string(expectedBackends)
-
-				if actualBackendsStr != expectedBackendsStr {
-					return err
-				}
-				return nil
-			}
-			return fmt.Errorf("backends count differs from expected: got %+v, want %+v", actual.Configuration.Backends, expected.Configuration.Backends)
-		}
-		return fmt.Errorf("frontends count differs from expected: got %+v, want %+v", actual.Configuration.Frontends, expected.Configuration.Frontends)
+func getJSON(i interface{}) string {
+	jsonBytes, err := json.Marshal(i)
+	if err != nil {
+		panic(err)
 	}
-	return fmt.Errorf("provider name differs from expected: got %q, want %q", actual.ProviderName, expected.ProviderName)
+	return string(jsonBytes)
 }
