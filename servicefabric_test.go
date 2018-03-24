@@ -142,7 +142,7 @@ func TestUpdateConfig(t *testing.T) {
 
 // TestServicesPresentInConfig tests that the basic services provide by SF
 // are return in the configuration object
-func TestServicesPresentInConfig(t *testing.T) {
+func TestBuildConfigurationServicesPresentInConfig(t *testing.T) {
 	provider := Provider{}
 
 	client := &clientMock{
@@ -182,7 +182,7 @@ func TestServicesPresentInConfig(t *testing.T) {
 }
 
 // nolint: gocyclo
-func TestFrontendLabelConfig(t *testing.T) {
+func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		labels   map[string]string
@@ -375,6 +375,40 @@ func TestFrontendLabelConfig(t *testing.T) {
 				assert.Equal(t, expected, f.Headers.CustomResponseHeaders)
 			},
 		},
+		{
+			desc: "Has Redirect on entry point ",
+			labels: map[string]string{
+				label.TraefikEnable:                      "true",
+				label.TraefikFrontendRedirectEntryPoint:  "foo",
+				label.TraefikFrontendRedirectPermanent:   "true",
+				label.TraefikFrontendRedirectRegex:       "nope",
+				label.TraefikFrontendRedirectReplacement: "nope",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				expected := &types.Redirect{
+					EntryPoint: "foo",
+					Permanent:  true,
+				}
+				assert.Equal(t, expected, f.Redirect)
+			},
+		},
+		{
+			desc: "Has Redirect with regex ",
+			labels: map[string]string{
+				label.TraefikEnable:                      "true",
+				label.TraefikFrontendRedirectPermanent:   "true",
+				label.TraefikFrontendRedirectRegex:       "(.*)",
+				label.TraefikFrontendRedirectReplacement: "$1",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				expected := &types.Redirect{
+					Regex:       "(.*)",
+					Replacement: "$1",
+					Permanent:   true,
+				}
+				assert.Equal(t, expected, f.Redirect)
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -411,7 +445,7 @@ func TestFrontendLabelConfig(t *testing.T) {
 }
 
 // nolint: gocyclo
-func TestBackendLabelConfig(t *testing.T) {
+func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		labels   map[string]string
@@ -519,35 +553,7 @@ func TestBackendLabelConfig(t *testing.T) {
 	}
 }
 
-func TestDisableLabelOverrides(t *testing.T) {
-	extensionLabels := map[string]string{
-		label.TraefikEnable:           "true",
-		traefikSFEnableLabelOverrides: "false",
-	}
-
-	propertyLabels := map[string]string{
-		"shouldnotexist": "true",
-	}
-
-	client := &clientMock{
-		applications:                 apps,
-		services:                     services,
-		partitions:                   partitions,
-		replicas:                     nil,
-		instances:                    instances,
-		getPropertiesResult:          propertyLabels,
-		getServiceExtensionMapResult: extensionLabels,
-		expectedPropertyName:         services.Items[0].ID,
-	}
-
-	res, err := getLabels(client, &services.Items[0], &apps.Items[0])
-	require.NoError(t, err)
-
-	_, exists := res["shouldnotexist"]
-	assert.False(t, exists)
-}
-
-func TestGroupedServicesFrontends(t *testing.T) {
+func TestBuildConfigurationGroupedServicesFrontends(t *testing.T) {
 	client := &clientMock{
 		applications: apps,
 		services:     services,
@@ -582,7 +588,7 @@ func TestGroupedServicesFrontends(t *testing.T) {
 	assert.Equal(t, expectedFrontends, config.Frontends)
 }
 
-func TestGroupedServicesBackends(t *testing.T) {
+func TestBuildConfigurationGroupedServicesBackends(t *testing.T) {
 	client := &clientMock{
 		applications: apps,
 		services:     services,
@@ -622,6 +628,34 @@ func TestGroupedServicesBackends(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expected, config.Backends)
+}
+
+func TestGetLabelsDisableLabelOverrides(t *testing.T) {
+	extensionLabels := map[string]string{
+		label.TraefikEnable:           "true",
+		traefikSFEnableLabelOverrides: "false",
+	}
+
+	propertyLabels := map[string]string{
+		"shouldnotexist": "true",
+	}
+
+	client := &clientMock{
+		applications:                 apps,
+		services:                     services,
+		partitions:                   partitions,
+		replicas:                     nil,
+		instances:                    instances,
+		getPropertiesResult:          propertyLabels,
+		getServiceExtensionMapResult: extensionLabels,
+		expectedPropertyName:         services.Items[0].ID,
+	}
+
+	res, err := getLabels(client, &services.Items[0], &apps.Items[0])
+	require.NoError(t, err)
+
+	_, exists := res["shouldnotexist"]
+	assert.False(t, exists)
 }
 
 func TestIsPrimary(t *testing.T) {
