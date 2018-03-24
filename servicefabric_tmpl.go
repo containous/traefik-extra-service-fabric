@@ -129,6 +129,15 @@ const tmpl = `
           {{end}}]
         {{end}}
 
+        {{ $redirect := getRedirect $service }}
+        {{if $redirect }}
+        [frontends."frontend-{{ $frontendName }}".redirect]
+          entryPoint = "{{ $redirect.EntryPoint }}"
+          regex = "{{ $redirect.Regex }}"
+          replacement = "{{ $redirect.Replacement }}"
+          permanent = {{ $redirect.Permanent }}
+        {{end}}
+
         {{ $headers := getHeaders $service }}
         {{if $headers }}
         [frontends."frontend-{{ $frontendName }}".headers]
