@@ -66,7 +66,7 @@
     "tls/generate",
     "types"
   ]
-  revision = "329c576f445aa5c7b310f4bc465e704b67c7c2b1"
+  revision = "d2766b1b4fc653cce4ee44b66e794d744b5e9b66"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -164,6 +164,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "439e87370bde2964292e65861a25a490fecd3b52b366357861b4d9e65dd34098"
+  inputs-digest = "75b84e11aae173455e3d20fe50ca2d800bcfa6c40b00a33c67adc1ee730254d6"
   solver-name = "gps-cdcl"
   solver-version = 1
