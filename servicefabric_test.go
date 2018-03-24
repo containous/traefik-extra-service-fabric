@@ -209,16 +209,31 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 			},
 		},
 		{
-			desc: "Has whitelistSourceRange set",
+			desc: "Has whitelistSourceRange set (deprecated)",
 			labels: map[string]string{
 				label.TraefikEnable:                       "true",
 				label.TraefikFrontendWhitelistSourceRange: "10.0.0.1, 10.0.0.2",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
-				assert.Len(t, f.WhitelistSourceRange, 2)
-
-				expected := []string{"10.0.0.1", "10.0.0.2"}
-				assert.EqualValues(t, expected, f.WhitelistSourceRange)
+				expected := &types.WhiteList{
+					SourceRange: []string{"10.0.0.1", "10.0.0.2"},
+				}
+				assert.EqualValues(t, expected, f.WhiteList)
+			},
+		},
+		{
+			desc: "Has WhiteList set ",
+			labels: map[string]string{
+				label.TraefikEnable:                            "true",
+				label.TraefikFrontendWhiteListSourceRange:      "10.0.0.1, 10.0.0.2",
+				label.TraefikFrontendWhiteListUseXForwardedFor: "true",
+			},
+			validate: func(t *testing.T, f *types.Frontend) {
+				expected := &types.WhiteList{
+					SourceRange:      []string{"10.0.0.1", "10.0.0.2"},
+					UseXForwardedFor: true,
+				}
+				assert.EqualValues(t, expected, f.WhiteList)
 			},
 		},
 		{
