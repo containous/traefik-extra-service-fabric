@@ -115,18 +115,20 @@ const tmpl = `
           {{end}}]
         {{end}}
   
-        {{ $whitelistSourceRange := getWhitelistSourceRange $service }}
-        {{if $whitelistSourceRange }}
-        whitelistSourceRange = [{{range $whitelistSourceRange }}
-          "{{.}}",
-          {{end}}]
-        {{end}}
-  
         {{ $basicAuth := getBasicAuth $service }}
         {{if $basicAuth }}
          basicAuth = [{{range $basicAuth }}
           "{{.}}",
           {{end}}]
+        {{end}}
+
+        {{ $whitelist := getWhiteList $service }}
+        {{if $whitelist }}
+        [frontends."frontend-{{ $frontendName }}".whiteList]
+          sourceRange = [{{range $whitelist.SourceRange }}
+            "{{.}}",
+            {{end}}]
+          useXForwardedFor = {{ $whitelist.UseXForwardedFor }}
         {{end}}
 
         {{ $redirect := getRedirect $service }}
