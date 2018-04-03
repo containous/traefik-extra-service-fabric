@@ -47,7 +47,7 @@ func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, 
 
 		// Frontend Functions
 		"getPriority":       getFuncServiceIntLabel(label.TraefikFrontendPriority, label.DefaultFrontendPriorityInt),
-		"getPassHostHeader": getFuncServiceStringLabel(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
+		"getPassHostHeader": getFuncServiceBoolLabel(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeaderBool),
 		"getPassTLSCert":    getFuncBoolLabel(label.TraefikFrontendPassTLSCert, false),
 		"getEntryPoints":    getFuncServiceSliceStringLabel(label.TraefikFrontendEntryPoints),
 		"getBasicAuth":      getFuncServiceSliceStringLabel(label.TraefikFrontendAuthBasic),
