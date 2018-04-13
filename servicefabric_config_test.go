@@ -603,12 +603,19 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendHealthCheckPath:     "/hc",
 				label.TraefikBackendHealthCheckPort:     "9000",
 				label.TraefikBackendHealthCheckInterval: "1337s",
+				label.TraefikBackendHealthCheckHostname: "foo.com",
+				label.TraefikBackendHealthCheckHeaders:  "Foo:bar || Bar:foo",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
 				expected := &types.HealthCheck{
 					Path:     "/hc",
 					Port:     9000,
 					Interval: "1337s",
+					Hostname: "foo.com",
+					Headers: map[string]string{
+						"Foo": "bar",
+						"Bar": "foo",
+					},
 				}
 				assert.Equal(t, expected, b.HealthCheck)
 			},
