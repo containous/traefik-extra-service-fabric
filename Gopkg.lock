@@ -66,7 +66,7 @@
     "tls/generate",
     "types"
   ]
-  revision = "d2766b1b4fc653cce4ee44b66e794d744b5e9b66"
+  revision = "de3aeb97323951ec5de3ab7b4ed2217bea18b8ab"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
