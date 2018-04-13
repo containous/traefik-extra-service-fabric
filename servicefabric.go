@@ -21,6 +21,11 @@ var _ provider.Provider = (*Provider)(nil)
 
 const traefikServiceFabricExtensionKey = "Traefik"
 
+const (
+	kindStateful  = "Stateful"
+	kindStateless = "Stateless"
+)
+
 // Provider holds for configuration for the provider
 type Provider struct {
 	provider.BaseProvider `mapstructure:",squash"`
@@ -233,11 +238,11 @@ func decodeEndpointData(endpointData string) (map[string]string, error) {
 }
 
 func isStateful(service ServiceItemExtended) bool {
-	return service.ServiceKind == "Stateful"
+	return service.ServiceKind == kindStateful
 }
 
 func isStateless(service ServiceItemExtended) bool {
-	return service.ServiceKind == "Stateless"
+	return service.ServiceKind == kindStateless
 }
 
 // Return a set of labels from the Extension and Property manager
