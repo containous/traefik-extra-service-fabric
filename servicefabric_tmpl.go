@@ -59,7 +59,7 @@ const tmpl = `
         {{range $instance := $partition.Instances}}
           [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
             url = "{{ getDefaultEndpoint $instance }}"
-            weight = {{ getLabelValue $service "backend.weight" "1" }}
+            weight = {{ getWeight $service }}
         {{end}}
 
       {{else if isStateful $service}}
@@ -204,7 +204,7 @@ const tmpl = `
       {{range $partition := $service.Partitions }}
         {{ $partitionId := $partition.PartitionInformation.ID }}
 
-        {{ $rule := getLabelValue $service (print "frontend.rule.partition." $partitionId) "" }}
+        {{ $rule := getLabelValue $service (print "traefik.frontend.rule.partition." $partitionId) "" }}
         {{if $rule }}
         [frontends."{{ $service.Name }}/{{ $partitionId }}"]
           backend = "{{ getBackendName $service $partition }}"

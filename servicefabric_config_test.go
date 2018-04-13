@@ -122,7 +122,7 @@ func TestBuildConfigurationStateful(t *testing.T) {
 		{
 			desc: "without frontend.rule label",
 			labels: map[string]string{
-				"traefik.enable": "true",
+				label.TraefikEnable: "true",
 			},
 			expected: &types.Configuration{
 				Backends: map[string]*types.Backend{
@@ -144,9 +144,9 @@ func TestBuildConfigurationStateful(t *testing.T) {
 		{
 			desc: "with label frontend.rule.partition.$partitionId",
 			labels: map[string]string{
-				"traefik.enable": "true",
-				"frontend.rule":  "foo",
-				"frontend.rule.partition.bce46a8c-b62d-4996-89dc-7ffc00a96902": "HeadersRegexp: username, ^b",
+				label.TraefikEnable:                                                    "true",
+				"traefik.frontend.rule":                                                "foo",
+				"traefik.frontend.rule.partition.bce46a8c-b62d-4996-89dc-7ffc00a96902": "HeadersRegexp: username, ^b",
 			},
 			expected: &types.Configuration{
 				Backends: map[string]*types.Backend{
