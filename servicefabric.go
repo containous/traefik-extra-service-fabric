@@ -1,7 +1,10 @@
 package servicefabric
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cenk/backoff"
@@ -171,11 +174,6 @@ func getValidInstances(sfClient sfClient, app sf.ApplicationItem, service sf.Ser
 	return validInstances
 }
 
-func isPrimary(instance replicaInstance) bool {
-	_, data := instance.GetReplicaData()
-	return data.ReplicaRole == "Primary"
-}
-
 func isHealthy(instanceData *sf.ReplicaItemBase) bool {
 	return instanceData != nil && (instanceData.ReplicaStatus == "Ready" && instanceData.HealthState != "Error")
 }
@@ -183,6 +181,54 @@ func isHealthy(instanceData *sf.ReplicaItemBase) bool {
 func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
 	_, err := getReplicaDefaultEndpoint(instanceData)
 	return err == nil
+}
+
+func getReplicaDefaultEndpoint(replicaData *sf.ReplicaItemBase) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
+	if err != nil {
+		return "", err
+	}
+
+	var defaultHTTPEndpoint string
+	for _, v := range endpoints {
+		if strings.Contains(v, "http") {
+			defaultHTTPEndpoint = v
+			break
+		}
+	}
+
+	if len(defaultHTTPEndpoint) == 0 {
+		return "", errors.New("no default endpoint found")
+	}
+	return defaultHTTPEndpoint, nil
+}
+
+func decodeEndpointData(endpointData string) (map[string]string, error) {
+	var endpointsMap map[string]map[string]string
+
+	if endpointData == "" {
+		return nil, errors.New("endpoint data is empty")
+	}
+
+	err := json.Unmarshal([]byte(endpointData), &endpointsMap)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoints, endpointsExist := endpointsMap["Endpoints"]
+	if !endpointsExist {
+		return nil, errors.New("endpoint doesn't exist in endpoint data")
+	}
+
+	return endpoints, nil
+}
+
+func isStateful(service ServiceItemExtended) bool {
+	return service.ServiceKind == "Stateful"
+}
+
+func isStateless(service ServiceItemExtended) bool {
+	return service.ServiceKind == "Stateless"
 }
 
 // Return a set of labels from the Extension and Property manager
