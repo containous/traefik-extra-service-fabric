@@ -111,6 +111,138 @@ func TestBuildConfigurationServicesPresentInConfig(t *testing.T) {
 	assert.Equal(t, expected, config)
 }
 
+func TestBuildConfigurationStateful(t *testing.T) {
+	provider := Provider{}
+
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		expected *types.Configuration
+	}{
+		{
+			desc: "without frontend.rule label",
+			labels: map[string]string{
+				"traefik.enable": "true",
+			},
+			expected: &types.Configuration{
+				Backends: map[string]*types.Backend{
+					"fabric-TestApplication-TestServicebce46a8c-b62d-4996-89dc-7ffc00a96902": {
+						LoadBalancer: &types.LoadBalancer{
+							Method: "drr",
+						},
+						Servers: map[string]types.Server{
+							"131496928082309293": {
+								URL:    "http://localhost:8081",
+								Weight: 1,
+							},
+						},
+					},
+				},
+				Frontends: map[string]*types.Frontend{},
+			},
+		},
+		{
+			desc: "with label frontend.rule.partition.$partitionId",
+			labels: map[string]string{
+				"traefik.enable": "true",
+				"frontend.rule":  "foo",
+				"frontend.rule.partition.bce46a8c-b62d-4996-89dc-7ffc00a96902": "HeadersRegexp: username, ^b",
+			},
+			expected: &types.Configuration{
+				Backends: map[string]*types.Backend{
+					"fabric-TestApplication-TestServicebce46a8c-b62d-4996-89dc-7ffc00a96902": {
+						LoadBalancer: &types.LoadBalancer{
+							Method: "drr",
+						},
+						Servers: map[string]types.Server{
+							"131496928082309293": {
+								URL:    "http://localhost:8081",
+								Weight: 1,
+							},
+						},
+					},
+				},
+				Frontends: map[string]*types.Frontend{
+					"fabric:/TestApplication/TestService/bce46a8c-b62d-4996-89dc-7ffc00a96902": {
+						Backend: "fabric-TestApplication-TestServicebce46a8c-b62d-4996-89dc-7ffc00a96902",
+						Routes: map[string]types.Route{
+							"default": {
+								Rule: "HeadersRegexp: username, ^b",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			services := []ServiceItemExtended{
+				{
+					ServiceItem: sf.ServiceItem{
+						HasPersistedState: true,
+						HealthState:       "Ok",
+						ID:                "TestApplication/TestService",
+						IsServiceGroup:    false,
+						ManifestVersion:   "1.0.0",
+						Name:              "fabric:/TestApplication/TestService",
+						ServiceKind:       kindStateful,
+						ServiceStatus:     "Active",
+						TypeName:          "TestServiceType",
+					},
+					Partitions: []PartitionItemExtended{
+						{
+							PartitionItem: sf.PartitionItem{
+								CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+									ConfigurationVersion: "12884901891",
+									DataLossVersion:      "131496928071680379",
+								},
+								HealthState:       "Ok",
+								MinReplicaSetSize: 1,
+								PartitionInformation: sf.PartitionInformation{
+									HighKey:              "9223372036854775807",
+									ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+									LowKey:               "-9223372036854775808",
+									ServicePartitionKind: "Int64Range",
+								},
+								PartitionStatus:      "Ready",
+								ServiceKind:          kindStateful,
+								TargetReplicaSetSize: 1,
+							},
+							Replicas: []sf.ReplicaItem{
+								{
+									ReplicaItemBase: &sf.ReplicaItemBase{
+										Address:                      `{"Endpoints":{"":"http://localhost:8081"}}`,
+										HealthState:                  "Ok",
+										LastInBuildDurationInSeconds: "1",
+										NodeName:                     "_Node_0",
+										ReplicaRole:                  "Primary",
+										ReplicaStatus:                "Ready",
+										ServiceKind:                  kindStateful,
+									},
+									ID: "131496928082309293",
+								},
+							},
+						},
+					},
+					Labels: test.labels,
+				},
+			}
+
+			config, err := provider.buildConfiguration(services)
+			require.NoError(t, err)
+
+			require.NotNil(t, config, "configuration")
+
+			assert.Equal(t, test.expected, config)
+		})
+	}
+}
+
 // nolint: gocyclo
 func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 	testCases := []struct {

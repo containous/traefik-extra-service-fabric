@@ -199,17 +199,18 @@ const tmpl = `
           rule = "{{ $value }}"
       {{end}}
 
-    {{else if isStateful $service}}
+    {{else if isStateful $service }}
 
       {{range $partition := $service.Partitions }}
         {{ $partitionId := $partition.PartitionInformation.ID }}
 
-        {{if hasLabel $service "frontend.rule" }}
-          [frontends."{{ $service.Name }}/{{ $partitionId }}"]
-            backend = "{{ getBackendName $service.Name $partition }}"
+        {{ $rule := getLabelValue $service (print "frontend.rule.partition." $partitionId) "" }}
+        {{if $rule }}
+        [frontends."{{ $service.Name }}/{{ $partitionId }}"]
+          backend = "{{ getBackendName $service $partition }}"
 
           [frontends."{{ $service.Name }}/{{ $partitionId }}".routes.default]
-            rule = {{ getLabelValue $service "frontend.rule.partition.$partitionId" "" }}
+            rule = "{{ $rule }}"
         {{end}}
       {{end}}
 
