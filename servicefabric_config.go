@@ -13,16 +13,7 @@ import (
 	sf "github.com/jjcollinge/servicefabric"
 )
 
-func (p *Provider) buildConfiguration(sfClient sfClient) (*types.Configuration, error) {
-	services, err := getClusterServices(sfClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return p.getConfiguration(services)
-}
-
-func (p *Provider) getConfiguration(services []ServiceItemExtended) (*types.Configuration, error) {
+func (p *Provider) buildConfiguration(services []ServiceItemExtended) (*types.Configuration, error) {
 	var sfFuncMap = template.FuncMap{
 		// Services
 		"getServices":                getServices,

@@ -69,7 +69,7 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 					log.Info("Checking service fabric config")
 				}
 
-				configuration, err := p.buildConfiguration(sfClient)
+				configuration, err := p.getConfiguration(sfClient)
 				if err != nil {
 					return err
 				}
@@ -91,6 +91,15 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 		}
 	})
 	return nil
+}
+
+func (p *Provider) getConfiguration(sfClient sfClient) (*types.Configuration, error) {
+	services, err := getClusterServices(sfClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.buildConfiguration(services)
 }
 
 func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {

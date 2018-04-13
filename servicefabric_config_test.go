@@ -16,17 +16,76 @@ import (
 func TestBuildConfigurationServicesPresentInConfig(t *testing.T) {
 	provider := Provider{}
 
-	client := &clientMock{
-		applications:                 apps,
-		services:                     services,
-		partitions:                   partitions,
-		replicas:                     nil,
-		instances:                    instances,
-		getServiceExtensionMapResult: labels,
-		expectedPropertyName:         services.Items[0].ID,
+	services := []ServiceItemExtended{
+		{
+			ServiceItem: sf.ServiceItem{
+				HasPersistedState: true,
+				HealthState:       "Ok",
+				ID:                "TestApplication/TestService",
+				IsServiceGroup:    false,
+				ManifestVersion:   "1.0.0",
+				Name:              "fabric:/TestApplication/TestService",
+				ServiceKind:       "Stateless",
+				ServiceStatus:     "Active",
+				TypeName:          "TestServiceType",
+			},
+			Application: sf.ApplicationItem{
+				HealthState: "Ok",
+				ID:          "TestApplication",
+				Name:        "fabric:/TestApplication",
+				Parameters: []*sf.AppParameter{
+					{
+						Key:   "TraefikPublish",
+						Value: "fabric:/TestApplication/TestService",
+					},
+				},
+				Status:      "Ready",
+				TypeName:    "TestApplicationType",
+				TypeVersion: "1.0.0",
+			},
+			Partitions: []PartitionItemExtended{
+				{
+					PartitionItem: sf.PartitionItem{
+						CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+							ConfigurationVersion: "12884901891",
+							DataLossVersion:      "131496928071680379",
+						},
+						HealthState:       "Ok",
+						MinReplicaSetSize: 1,
+						PartitionInformation: sf.PartitionInformation{
+							HighKey:              "9223372036854775807",
+							ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+							LowKey:               "-9223372036854775808",
+							ServicePartitionKind: "Int64Range",
+						},
+						PartitionStatus:      "Ready",
+						ServiceKind:          "Stateless",
+						TargetReplicaSetSize: 1,
+					},
+					Replicas: nil,
+					Instances: []sf.InstanceItem{
+						{
+							ReplicaItemBase: &sf.ReplicaItemBase{
+								Address:                      "{\"Endpoints\":{\"\":\"http://localhost:8081\"}}",
+								HealthState:                  "Ok",
+								LastInBuildDurationInSeconds: "3",
+								NodeName:                     "_Node_0",
+								ReplicaRole:                  "",
+								ReplicaStatus:                "Ready",
+								ServiceKind:                  "Stateless",
+							},
+							ID: "1",
+						},
+					},
+				},
+			},
+			Labels: map[string]string{
+				"traefik.enable": "true",
+			},
+		},
 	}
 
-	config, err := provider.buildConfiguration(client)
+	config, err := provider.buildConfiguration(services)
 	require.NoError(t, err)
 
 	require.NotNil(t, config, "configuration")
@@ -304,16 +363,74 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 
 			provider := Provider{}
 
-			client := &clientMock{
-				applications:                 apps,
-				services:                     services,
-				partitions:                   partitions,
-				replicas:                     nil,
-				instances:                    instances,
-				getServiceExtensionMapResult: test.labels,
+			services := []ServiceItemExtended{
+				{
+					ServiceItem: sf.ServiceItem{
+						HasPersistedState: true,
+						HealthState:       "Ok",
+						ID:                "TestApplication/TestService",
+						IsServiceGroup:    false,
+						ManifestVersion:   "1.0.0",
+						Name:              "fabric:/TestApplication/TestService",
+						ServiceKind:       "Stateless",
+						ServiceStatus:     "Active",
+						TypeName:          "TestServiceType",
+					},
+					Application: sf.ApplicationItem{
+						HealthState: "Ok",
+						ID:          "TestApplication",
+						Name:        "fabric:/TestApplication",
+						Parameters: []*sf.AppParameter{
+							{
+								Key:   "TraefikPublish",
+								Value: "fabric:/TestApplication/TestService",
+							},
+						},
+						Status:      "Ready",
+						TypeName:    "TestApplicationType",
+						TypeVersion: "1.0.0",
+					},
+					Partitions: []PartitionItemExtended{
+						{
+							PartitionItem: sf.PartitionItem{
+								CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+									ConfigurationVersion: "12884901891",
+									DataLossVersion:      "131496928071680379",
+								},
+								HealthState:       "Ok",
+								MinReplicaSetSize: 1,
+								PartitionInformation: sf.PartitionInformation{
+									HighKey:              "9223372036854775807",
+									ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+									LowKey:               "-9223372036854775808",
+									ServicePartitionKind: "Int64Range",
+								},
+								PartitionStatus:      "Ready",
+								ServiceKind:          "Stateless",
+								TargetReplicaSetSize: 1,
+							},
+							Replicas: nil,
+							Instances: []sf.InstanceItem{
+								{
+									ReplicaItemBase: &sf.ReplicaItemBase{
+										Address:                      "{\"Endpoints\":{\"\":\"http://localhost:8081\"}}",
+										HealthState:                  "Ok",
+										LastInBuildDurationInSeconds: "3",
+										NodeName:                     "_Node_0",
+										ReplicaRole:                  "",
+										ReplicaStatus:                "Ready",
+										ServiceKind:                  "Stateless",
+									},
+									ID: "1",
+								},
+							},
+						},
+					},
+					Labels: test.labels,
+				},
 			}
 
-			config, err := provider.buildConfiguration(client)
+			config, err := provider.buildConfiguration(services)
 			require.NoError(t, err)
 
 			assert.NotEmpty(t, config.Frontends, "No frontends present in the configuration")
@@ -413,16 +530,74 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 
 			provider := Provider{}
 
-			client := &clientMock{
-				applications:                 apps,
-				services:                     services,
-				partitions:                   partitions,
-				replicas:                     nil,
-				instances:                    instances,
-				getServiceExtensionMapResult: test.labels,
+			services := []ServiceItemExtended{
+				{
+					ServiceItem: sf.ServiceItem{
+						HasPersistedState: true,
+						HealthState:       "Ok",
+						ID:                "TestApplication/TestService",
+						IsServiceGroup:    false,
+						ManifestVersion:   "1.0.0",
+						Name:              "fabric:/TestApplication/TestService",
+						ServiceKind:       "Stateless",
+						ServiceStatus:     "Active",
+						TypeName:          "TestServiceType",
+					},
+					Application: sf.ApplicationItem{
+						HealthState: "Ok",
+						ID:          "TestApplication",
+						Name:        "fabric:/TestApplication",
+						Parameters: []*sf.AppParameter{
+							{
+								Key:   "TraefikPublish",
+								Value: "fabric:/TestApplication/TestService",
+							},
+						},
+						Status:      "Ready",
+						TypeName:    "TestApplicationType",
+						TypeVersion: "1.0.0",
+					},
+					Partitions: []PartitionItemExtended{
+						{
+							PartitionItem: sf.PartitionItem{
+								CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+									ConfigurationVersion: "12884901891",
+									DataLossVersion:      "131496928071680379",
+								},
+								HealthState:       "Ok",
+								MinReplicaSetSize: 1,
+								PartitionInformation: sf.PartitionInformation{
+									HighKey:              "9223372036854775807",
+									ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+									LowKey:               "-9223372036854775808",
+									ServicePartitionKind: "Int64Range",
+								},
+								PartitionStatus:      "Ready",
+								ServiceKind:          "Stateless",
+								TargetReplicaSetSize: 1,
+							},
+							Replicas: nil,
+							Instances: []sf.InstanceItem{
+								{
+									ReplicaItemBase: &sf.ReplicaItemBase{
+										Address:                      "{\"Endpoints\":{\"\":\"http://localhost:8081\"}}",
+										HealthState:                  "Ok",
+										LastInBuildDurationInSeconds: "3",
+										NodeName:                     "_Node_0",
+										ReplicaRole:                  "",
+										ReplicaStatus:                "Ready",
+										ServiceKind:                  "Stateless",
+									},
+									ID: "1",
+								},
+							},
+						},
+					},
+					Labels: test.labels,
+				},
 			}
 
-			config, err := provider.buildConfiguration(client)
+			config, err := provider.buildConfiguration(services)
 			require.NoError(t, err)
 
 			assert.NotEmpty(t, config.Backends, "No backends present in the configuration")
@@ -440,22 +615,80 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 }
 
 func TestBuildConfigurationGroupedServicesFrontends(t *testing.T) {
-	client := &clientMock{
-		applications: apps,
-		services:     services,
-		partitions:   partitions,
-		replicas:     nil,
-		instances:    instances,
-		getServiceExtensionMapResult: map[string]string{
-			label.TraefikEnable:  "true",
-			traefikSFGroupName:   "groupedbackends",
-			traefikSFGroupWeight: "154",
+	services := []ServiceItemExtended{
+		{
+			ServiceItem: sf.ServiceItem{
+				HasPersistedState: true,
+				HealthState:       "Ok",
+				ID:                "TestApplication/TestService",
+				IsServiceGroup:    false,
+				ManifestVersion:   "1.0.0",
+				Name:              "fabric:/TestApplication/TestService",
+				ServiceKind:       "Stateless",
+				ServiceStatus:     "Active",
+				TypeName:          "TestServiceType",
+			},
+			Application: sf.ApplicationItem{
+				HealthState: "Ok",
+				ID:          "TestApplication",
+				Name:        "fabric:/TestApplication",
+				Parameters: []*sf.AppParameter{
+					{
+						Key:   "TraefikPublish",
+						Value: "fabric:/TestApplication/TestService",
+					},
+				},
+				Status:      "Ready",
+				TypeName:    "TestApplicationType",
+				TypeVersion: "1.0.0",
+			},
+			Partitions: []PartitionItemExtended{
+				{
+					PartitionItem: sf.PartitionItem{
+						CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+							ConfigurationVersion: "12884901891",
+							DataLossVersion:      "131496928071680379",
+						},
+						HealthState:       "Ok",
+						MinReplicaSetSize: 1,
+						PartitionInformation: sf.PartitionInformation{
+							HighKey:              "9223372036854775807",
+							ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+							LowKey:               "-9223372036854775808",
+							ServicePartitionKind: "Int64Range",
+						},
+						PartitionStatus:      "Ready",
+						ServiceKind:          "Stateless",
+						TargetReplicaSetSize: 1,
+					},
+					Replicas: nil,
+					Instances: []sf.InstanceItem{
+						{
+							ReplicaItemBase: &sf.ReplicaItemBase{
+								Address:                      "{\"Endpoints\":{\"\":\"http://localhost:8081\"}}",
+								HealthState:                  "Ok",
+								LastInBuildDurationInSeconds: "3",
+								NodeName:                     "_Node_0",
+								ReplicaRole:                  "",
+								ReplicaStatus:                "Ready",
+								ServiceKind:                  "Stateless",
+							},
+							ID: "1",
+						},
+					},
+				},
+			},
+			Labels: map[string]string{
+				label.TraefikEnable:  "true",
+				traefikSFGroupName:   "groupedbackends",
+				traefikSFGroupWeight: "154",
+			},
 		},
 	}
 
 	provider := Provider{}
 
-	config, err := provider.buildConfiguration(client)
+	config, err := provider.buildConfiguration(services)
 	require.NoError(t, err)
 
 	require.NotNil(t, config, "configuration")
@@ -475,22 +708,80 @@ func TestBuildConfigurationGroupedServicesFrontends(t *testing.T) {
 }
 
 func TestBuildConfigurationGroupedServicesBackends(t *testing.T) {
-	client := &clientMock{
-		applications: apps,
-		services:     services,
-		partitions:   partitions,
-		replicas:     nil,
-		instances:    instances,
-		getServiceExtensionMapResult: map[string]string{
-			label.TraefikEnable:  "true",
-			traefikSFGroupName:   "groupedbackends",
-			traefikSFGroupWeight: "154",
+	services := []ServiceItemExtended{
+		{
+			ServiceItem: sf.ServiceItem{
+				HasPersistedState: true,
+				HealthState:       "Ok",
+				ID:                "TestApplication/TestService",
+				IsServiceGroup:    false,
+				ManifestVersion:   "1.0.0",
+				Name:              "fabric:/TestApplication/TestService",
+				ServiceKind:       "Stateless",
+				ServiceStatus:     "Active",
+				TypeName:          "TestServiceType",
+			},
+			Application: sf.ApplicationItem{
+				HealthState: "Ok",
+				ID:          "TestApplication",
+				Name:        "fabric:/TestApplication",
+				Parameters: []*sf.AppParameter{
+					{
+						Key:   "TraefikPublish",
+						Value: "fabric:/TestApplication/TestService",
+					},
+				},
+				Status:      "Ready",
+				TypeName:    "TestApplicationType",
+				TypeVersion: "1.0.0",
+			},
+			Partitions: []PartitionItemExtended{
+				{
+					PartitionItem: sf.PartitionItem{
+						CurrentConfigurationEpoch: sf.ConfigurationEpoch{
+							ConfigurationVersion: "12884901891",
+							DataLossVersion:      "131496928071680379",
+						},
+						HealthState:       "Ok",
+						MinReplicaSetSize: 1,
+						PartitionInformation: sf.PartitionInformation{
+							HighKey:              "9223372036854775807",
+							ID:                   "bce46a8c-b62d-4996-89dc-7ffc00a96902",
+							LowKey:               "-9223372036854775808",
+							ServicePartitionKind: "Int64Range",
+						},
+						PartitionStatus:      "Ready",
+						ServiceKind:          "Stateless",
+						TargetReplicaSetSize: 1,
+					},
+					Replicas: nil,
+					Instances: []sf.InstanceItem{
+						{
+							ReplicaItemBase: &sf.ReplicaItemBase{
+								Address:                      "{\"Endpoints\":{\"\":\"http://localhost:8081\"}}",
+								HealthState:                  "Ok",
+								LastInBuildDurationInSeconds: "3",
+								NodeName:                     "_Node_0",
+								ReplicaRole:                  "",
+								ReplicaStatus:                "Ready",
+								ServiceKind:                  "Stateless",
+							},
+							ID: "1",
+						},
+					},
+				},
+			},
+			Labels: map[string]string{
+				label.TraefikEnable:  "true",
+				traefikSFGroupName:   "groupedbackends",
+				traefikSFGroupWeight: "154",
+			},
 		},
 	}
 
 	provider := Provider{}
 
-	config, err := provider.buildConfiguration(client)
+	config, err := provider.buildConfiguration(services)
 	require.NoError(t, err)
 
 	require.NotNil(t, config, "configuration")
