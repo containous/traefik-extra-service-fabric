@@ -9,7 +9,7 @@ ignored = ["github.com/containous/traefik/autogen/genstatic"]
   name = "github.com/cenk/backoff"
 
 [[override]]
-  branch = "v1.6"
+  branch = "master"
   name = "github.com/containous/traefik"
 
 # Gopkg.toml example
