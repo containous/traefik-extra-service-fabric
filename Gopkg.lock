@@ -53,7 +53,7 @@
   revision = "06ccd3e75091eb659b1d720cda0e16bc7057954c"
 
 [[projects]]
-  branch = "v1.6"
+  branch = "master"
   name = "github.com/containous/traefik"
   packages = [
     "autogen/gentemplates",
@@ -66,7 +66,7 @@
     "tls/generate",
     "types"
   ]
-  revision = "f0589b310f74673719a3ba4740ffd27a696d0cea"
+  revision = "21b8b2deb552e01d163e12ba2e587786573e7962"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -164,6 +164,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "31a5f5fa97c9a47265feb75484157b11fccbe0323ce376ce49235d6c369bbb0b"
+  inputs-digest = "75b84e11aae173455e3d20fe50ca2d800bcfa6c40b00a33c67adc1ee730254d6"
   solver-name = "gps-cdcl"
   solver-version = 1
