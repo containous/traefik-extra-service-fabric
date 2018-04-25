@@ -38,8 +38,8 @@ type Provider struct {
 	TLS                   *types.ClientTLS `description:"Enable TLS support" export:"true"`
 	AppInsightsClientName string           `description:"The client name, Identifies the cloud instance"`
 	AppInsightsKey        string           `description:"Application Insights Instrumentation Key"`
-	AppInsightBatchSize   int              `description:"Number of trace lines per batch, optional"`
-	AppInsightInterval    flaeg.Duration   `description:"The interval for sending data to Application Insights, optional"`
+	AppInsightsBatchSize  int              `description:"Number of trace lines per batch, optional"`
+	AppInsightsInterval   flaeg.Duration   `description:"The interval for sending data to Application Insights, optional"`
 }
 
 // Provide allows the ServiceFabric provider to provide configurations to traefik
@@ -64,13 +64,13 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 	}
 
 	if p.AppInsightsClientName != "" && p.AppInsightsKey != "" {
-		if p.AppInsightBatchSize == 0 {
-			p.AppInsightBatchSize = 10
+		if p.AppInsightsBatchSize == 0 {
+			p.AppInsightsBatchSize = 10
 		}
-		if p.AppInsightInterval == 0 {
-			p.AppInsightInterval = flaeg.Duration(time.Second * 5)
+		if p.AppInsightsInterval == 0 {
+			p.AppInsightsInterval = flaeg.Duration(time.Second * 5)
 		}
-		createAppInsightsHook(p.AppInsightsClientName, p.AppInsightsKey, p.AppInsightBatchSize, p.AppInsightInterval)
+		createAppInsightsHook(p.AppInsightsClientName, p.AppInsightsKey, p.AppInsightsBatchSize, p.AppInsightsInterval)
 	}
 
 	return p.updateConfig(configurationChan, pool, sfClient, time.Duration(p.RefreshSeconds))
