@@ -59,7 +59,7 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 	}
 
 	if p.RefreshSeconds <= 0 {
-		p.RefreshSeconds = flaeg.Duration(time.Second * 10)
+		p.RefreshSeconds = flaeg.Duration(10 * time.Second)
 	}
 
 	if p.AppInsightsClientName != "" && p.AppInsightsKey != "" {
@@ -67,7 +67,7 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 			p.AppInsightsBatchSize = 10
 		}
 		if p.AppInsightsInterval == 0 {
-			p.AppInsightsInterval = flaeg.Duration(time.Second * 5)
+			p.AppInsightsInterval = flaeg.Duration(5 * time.Second)
 		}
 		createAppInsightsHook(p.AppInsightsClientName, p.AppInsightsKey, p.AppInsightsBatchSize, p.AppInsightsInterval)
 	}
