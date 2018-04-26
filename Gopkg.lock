@@ -3,12 +3,6 @@
 
 [[projects]]
   branch = "master"
-  name = "code.cloudfoundry.org/clock"
-  packages = ["."]
-  revision = "e9dc86bbf0e5bbe6bf7ff5a6f71e048959b61f71"
-
-[[projects]]
-  branch = "master"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
   revision = "a368813c5e648fee92e5f6c30e3944ff9d5e8895"
@@ -24,11 +18,6 @@
   packages = ["."]
   revision = "b217b9c388de2cacde4354c536e520c52c055563"
   version = "v2.14.1"
-
-[[projects]]
-  name = "github.com/Microsoft/ApplicationInsights-Go"
-  packages = ["appinsights"]
-  revision = "98ac7ca026c26818888600ea0d966987aa56f043"
 
 [[projects]]
   branch = "master"
@@ -104,11 +93,6 @@
   version = "0.3.2"
 
 [[projects]]
-  name = "github.com/jjcollinge/logrus-appinsights"
-  packages = ["."]
-  revision = "9b66602d496a139e4722bdde32f0f1ac1c12d4a8"
-
-[[projects]]
   name = "github.com/jjcollinge/servicefabric"
   packages = ["."]
   revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
@@ -180,6 +164,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a640be32be1602780ab71e33ca01082ff09cf47dbc3e4bf57101079ccc48d174"
+  inputs-digest = "75b84e11aae173455e3d20fe50ca2d800bcfa6c40b00a33c67adc1ee730254d6"
   solver-name = "gps-cdcl"
   solver-version = 1
