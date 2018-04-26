@@ -8,7 +8,7 @@ test: clean
 	go test -v -cover ./...
 
 dependencies:
-	dep ensure -v
+	dep ensure -v --vendor-only
 
 clean:
 	rm -f cover.out
