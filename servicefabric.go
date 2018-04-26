@@ -15,9 +15,8 @@ import (
 	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
-	sf "github.com/jjcollinge/servicefabric"
-
 	"github.com/jjcollinge/logrus-appinsights"
+	sf "github.com/jjcollinge/servicefabric"
 )
 
 var _ provider.Provider = (*Provider)(nil)
