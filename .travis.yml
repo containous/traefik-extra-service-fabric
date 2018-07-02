@@ -5,8 +5,6 @@ go:
   - master
 
 sudo: required
-services:
-  - docker
 
 notifications:
   email:
