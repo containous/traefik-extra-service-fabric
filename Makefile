@@ -6,7 +6,6 @@ default: clean checks test build
 
 test: clean
 	go test -v -cover .
-	go test -v -cover ./...
 
 integration-tests: 
 	go test -v -timeout=20m ./integration/*_test.go -sfintegration.verbose
