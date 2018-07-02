@@ -2,3 +2,5 @@
 .vscode/
 vendor/
 *.swp
+integration/traefik_linux-386
+integration/traefik/TraefikPkg/Code/traefik

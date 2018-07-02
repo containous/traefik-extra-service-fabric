@@ -1,6 +1,8 @@
 package servicefabric
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -240,16 +242,12 @@ func decodeEndpointData(endpointData string) (map[string]string, error) {
 
 	err := json.Unmarshal([]byte(endpointData), &endpointsMap)
 	if err != nil {
-		log.Errorf("Error retreiving serviceExtensionMap: %v", err)
 		return nil, err
 	}
 
-	if label.GetBoolValue(labels, traefikSFEnableLabelOverrides, traefikSFEnableLabelOverridesDefault) {
-		if exists, properties, err := sfClient.GetProperties(service.ID); err == nil && exists {
-			for key, value := range properties {
-				labels[key] = value
-			}
-		}
+	endpoints, endpointsExist := endpointsMap["Endpoints"]
+	if !endpointsExist {
+		return nil, errors.New("endpoint doesn't exist in endpoint data")
 	}
 
 	return endpoints, nil

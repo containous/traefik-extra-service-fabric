@@ -144,6 +144,7 @@ func TestGetLabelsDisableLabelOverrides(t *testing.T) {
 		label.TraefikEnable:           "true",
 		traefikSFEnableLabelOverrides: "false",
 	}
+
 	propertyLabels := map[string]string{
 		"shouldnotexist": "true",
 	}
@@ -258,54 +259,6 @@ func TestIsStateX(t *testing.T) {
 			serviceItem: ServiceItemExtended{
 				ServiceItem: sf.ServiceItem{
 					ServiceKind: kindStateless,
-				},
-			},
-			expectedStateless: true,
-			expectedStateful:  false,
-		},
-	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			isStatefulResult := isStateful(test.serviceItem)
-			isStatelessResult := isStateless(test.serviceItem)
-
-			if isStatefulResult != test.expectedStateful {
-				t.Errorf("Failed isStateful. Got %v, expected %v", isStatefulResult, test.expectedStateful)
-			}
-
-			if isStatelessResult != test.expectedStateless {
-				t.Errorf("Failed isStateless. Got %v, expected %v", isStatelessResult, test.expectedStateless)
-			}
-		})
-	}
-}
-
-func TestIsStateX(t *testing.T) {
-	testCases := []struct {
-		desc              string
-		serviceItem       ServiceItemExtended
-		expectedStateless bool
-		expectedStateful  bool
-	}{
-		{
-			desc: "With Stateful service",
-			serviceItem: ServiceItemExtended{
-				ServiceItem: sf.ServiceItem{
-					ServiceKind: "Stateful",
-				},
-			},
-			expectedStateless: false,
-			expectedStateful:  true,
-		},
-		{
-			desc: "With Stateless service",
-			serviceItem: ServiceItemExtended{
-				ServiceItem: sf.ServiceItem{
-					ServiceKind: "Stateless",
 				},
 			},
 			expectedStateless: true,

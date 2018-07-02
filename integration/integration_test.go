@@ -19,10 +19,12 @@ import (
 
 var isVerbose bool
 var isClusterAlreadyRunning bool
+var removeCluster bool
 
 func init() {
 	flag.BoolVar(&isVerbose, "sfintegration.verbose", false, "Show the full output of cluster creation scripts")
 	flag.BoolVar(&isClusterAlreadyRunning, "sfintegration.clusterrunning", false, "Will skip cluster creation and teardown")
+	flag.BoolVar(&removeCluster, "sfintegration.removecluster", false, "Should test leave the cluster running")
 }
 
 func TestMain(m *testing.M) {
@@ -38,7 +40,7 @@ func TestMain(m *testing.M) {
 
 	retCode := m.Run()
 
-	if !isClusterAlreadyRunning {
+	if removeCluster {
 		stopTestCluster()
 	}
 	os.Exit(retCode)
