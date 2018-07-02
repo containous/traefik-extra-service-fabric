@@ -40,7 +40,7 @@ func (c *clientMock) GetInstances(appName, serviceName, partitionName string) (*
 
 func (c *clientMock) GetServiceExtensionMap(service *sf.ServiceItem, app *sf.ApplicationItem, extensionKey string) (map[string]string, error) {
 	if extensionKey != traefikServiceFabricExtensionKey {
-		return nil, fmt.Errorf("Extension key not expected value have: %v expect: %v", extensionKey, traefikServiceFabricExtensionKey)
+		return nil, fmt.Errorf("extension key not expected value have: %s expect: %s", extensionKey, traefikServiceFabricExtensionKey)
 	}
 	return c.getServiceExtensionMapResult, nil
 }

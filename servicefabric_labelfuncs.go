@@ -14,18 +14,6 @@ const (
 	traefikSFEnableLabelOverridesDefault = true
 )
 
-func getFuncInt64Label(labelName string, defaultValue int64) func(service ServiceItemExtended) int64 {
-	return func(service ServiceItemExtended) int64 {
-		return label.GetInt64Value(service.Labels, labelName, defaultValue)
-	}
-}
-
-func getFuncMapLabel(labelName string) func(service ServiceItemExtended) map[string]string {
-	return func(service ServiceItemExtended) map[string]string {
-		return label.GetMapValue(service.Labels, labelName)
-	}
-}
-
 func getFuncBoolLabel(labelName string, defaultValue bool) func(service ServiceItemExtended) bool {
 	return func(service ServiceItemExtended) bool {
 		return label.GetBoolValue(service.Labels, labelName, defaultValue)
@@ -42,6 +30,18 @@ func getFuncServiceStringLabel(labelName string, defaultValue string) func(servi
 	}
 }
 
+func getFuncServiceIntLabel(labelName string, defaultValue int) func(service ServiceItemExtended) int {
+	return func(service ServiceItemExtended) int {
+		return label.GetIntValue(service.Labels, labelName, defaultValue)
+	}
+}
+
+func getFuncServiceBoolLabel(labelName string, defaultValue bool) func(service ServiceItemExtended) bool {
+	return func(service ServiceItemExtended) bool {
+		return label.GetBoolValue(service.Labels, labelName, defaultValue)
+	}
+}
+
 func getFuncServiceSliceStringLabel(labelName string) func(service ServiceItemExtended) []string {
 	return func(service ServiceItemExtended) []string {
 		return label.GetSliceStringValue(service.Labels, labelName)
@@ -50,12 +50,6 @@ func getFuncServiceSliceStringLabel(labelName string) func(service ServiceItemEx
 
 func hasService(service ServiceItemExtended, labelName string) bool {
 	return label.Has(service.Labels, labelName)
-}
-
-func hasFuncService(labelName string) func(service ServiceItemExtended) bool {
-	return func(service ServiceItemExtended) bool {
-		return label.Has(service.Labels, labelName)
-	}
 }
 
 func getFuncServiceLabelWithPrefix(labelName string) func(service ServiceItemExtended) map[string]string {

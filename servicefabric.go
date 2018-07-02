@@ -2,15 +2,18 @@ package servicefabric
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cenk/backoff"
+	"github.com/containous/flaeg"
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/provider/label"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
+	"github.com/jjcollinge/logrus-appinsights"
 	sf "github.com/jjcollinge/servicefabric"
 )
 
@@ -18,13 +21,22 @@ var _ provider.Provider = (*Provider)(nil)
 
 const traefikServiceFabricExtensionKey = "Traefik"
 
+const (
+	kindStateful  = "Stateful"
+	kindStateless = "Stateless"
+)
+
 // Provider holds for configuration for the provider
 type Provider struct {
 	provider.BaseProvider `mapstructure:",squash"`
 	ClusterManagementURL  string           `description:"Service Fabric API endpoint"`
 	APIVersion            string           `description:"Service Fabric API version" export:"true"`
-	RefreshSeconds        int              `description:"Polling interval (in seconds)" export:"true"`
+	RefreshSeconds        flaeg.Duration   `description:"Polling interval (in seconds)" export:"true"`
 	TLS                   *types.ClientTLS `description:"Enable TLS support" export:"true"`
+	AppInsightsClientName string           `description:"The client name, Identifies the cloud instance"`
+	AppInsightsKey        string           `description:"Application Insights Instrumentation Key"`
+	AppInsightsBatchSize  int              `description:"Number of trace lines per batch, optional"`
+	AppInsightsInterval   flaeg.Duration   `description:"The interval for sending data to Application Insights, optional"`
 }
 
 // Provide allows the ServiceFabric provider to provide configurations to traefik
@@ -45,10 +57,20 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 	}
 
 	if p.RefreshSeconds <= 0 {
-		p.RefreshSeconds = 10
+		p.RefreshSeconds = flaeg.Duration(10 * time.Second)
 	}
 
-	return p.updateConfig(configurationChan, pool, sfClient, time.Duration(p.RefreshSeconds)*time.Second)
+	if p.AppInsightsClientName != "" && p.AppInsightsKey != "" {
+		if p.AppInsightsBatchSize == 0 {
+			p.AppInsightsBatchSize = 10
+		}
+		if p.AppInsightsInterval == 0 {
+			p.AppInsightsInterval = flaeg.Duration(5 * time.Second)
+		}
+		createAppInsightsHook(p.AppInsightsClientName, p.AppInsightsKey, p.AppInsightsBatchSize, p.AppInsightsInterval)
+	}
+
+	return p.updateConfig(configurationChan, pool, sfClient, time.Duration(p.RefreshSeconds))
 }
 
 func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, pool *safe.Pool, sfClient sfClient, pollInterval time.Duration) error {
@@ -66,7 +88,7 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 					log.Info("Checking service fabric config")
 				}
 
-				configuration, err := p.buildConfiguration(sfClient)
+				configuration, err := p.getConfiguration(sfClient)
 				if err != nil {
 					return err
 				}
@@ -88,6 +110,15 @@ func (p *Provider) updateConfig(configurationChan chan<- types.ConfigMessage, po
 		}
 	})
 	return nil
+}
+
+func (p *Provider) getConfiguration(sfClient sfClient) (*types.Configuration, error) {
+	services, err := getClusterServices(sfClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.buildConfiguration(services)
 }
 
 func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
@@ -171,13 +202,8 @@ func getValidInstances(sfClient sfClient, app sf.ApplicationItem, service sf.Ser
 	return validInstances
 }
 
-func isPrimary(instance replicaInstance) bool {
-	_, data := instance.GetReplicaData()
-	return data.ReplicaRole == "Primary"
-}
-
 func isHealthy(instanceData *sf.ReplicaItemBase) bool {
-	return instanceData != nil && (instanceData.ReplicaStatus == "Ready" || instanceData.HealthState != "Error")
+	return instanceData != nil && (instanceData.ReplicaStatus == "Ready" && instanceData.HealthState != "Error")
 }
 
 func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
@@ -185,10 +211,34 @@ func hasHTTPEndpoint(instanceData *sf.ReplicaItemBase) bool {
 	return err == nil
 }
 
-// Return a set of labels from the Extension and Property manager
-// Allow Extension labels to disable importing labels from the property manager.
-func getLabels(sfClient sfClient, service *sf.ServiceItem, app *sf.ApplicationItem) (map[string]string, error) {
-	labels, err := sfClient.GetServiceExtensionMap(service, app, traefikServiceFabricExtensionKey)
+func getReplicaDefaultEndpoint(replicaData *sf.ReplicaItemBase) (string, error) {
+	endpoints, err := decodeEndpointData(replicaData.Address)
+	if err != nil {
+		return "", err
+	}
+
+	var defaultHTTPEndpoint string
+	for _, v := range endpoints {
+		if strings.Contains(v, "http") {
+			defaultHTTPEndpoint = v
+			break
+		}
+	}
+
+	if len(defaultHTTPEndpoint) == 0 {
+		return "", errors.New("no default endpoint found")
+	}
+	return defaultHTTPEndpoint, nil
+}
+
+func decodeEndpointData(endpointData string) (map[string]string, error) {
+	var endpointsMap map[string]map[string]string
+
+	if endpointData == "" {
+		return nil, errors.New("endpoint data is empty")
+	}
+
+	err := json.Unmarshal([]byte(endpointData), &endpointsMap)
 	if err != nil {
 		log.Errorf("Error retreiving serviceExtensionMap: %v", err)
 		return nil, err
@@ -201,5 +251,48 @@ func getLabels(sfClient sfClient, service *sf.ServiceItem, app *sf.ApplicationIt
 			}
 		}
 	}
+
+	return endpoints, nil
+}
+
+func isStateful(service ServiceItemExtended) bool {
+	return service.ServiceKind == kindStateful
+}
+
+func isStateless(service ServiceItemExtended) bool {
+	return service.ServiceKind == kindStateless
+}
+
+// Return a set of labels from the Extension and Property manager
+// Allow Extension labels to disable importing labels from the property manager.
+func getLabels(sfClient sfClient, service *sf.ServiceItem, app *sf.ApplicationItem) (map[string]string, error) {
+	labels, err := sfClient.GetServiceExtensionMap(service, app, traefikServiceFabricExtensionKey)
+	if err != nil {
+		log.Errorf("Error retrieving serviceExtensionMap: %v", err)
+		return nil, err
+	}
+
+	if label.GetBoolValue(labels, traefikSFEnableLabelOverrides, traefikSFEnableLabelOverridesDefault) {
+		if exists, properties, err := sfClient.GetProperties(service.ID); err == nil && exists {
+			for key, value := range properties {
+				labels[key] = value
+			}
+		}
+	}
 	return labels, nil
+}
+
+func createAppInsightsHook(appInsightsClientName string, instrumentationKey string, maxBatchSize int, interval flaeg.Duration) {
+	hook, err := logrus_appinsights.New(appInsightsClientName, logrus_appinsights.Config{
+		InstrumentationKey: instrumentationKey,
+		MaxBatchSize:       maxBatchSize,            // optional
+		MaxBatchInterval:   time.Duration(interval), // optional
+	})
+	if err != nil || hook == nil {
+		panic(err)
+	}
+
+	// ignore fields
+	hook.AddIgnore("private")
+	log.AddHook(hook)
 }

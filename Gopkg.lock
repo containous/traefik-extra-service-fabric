@@ -2,10 +2,16 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "code.cloudfoundry.org/clock"
+  packages = ["."]
+  revision = "e9dc86bbf0e5bbe6bf7ff5a6f71e048959b61f71"
+
+[[projects]]
+  branch = "master"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
-  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
-  version = "v0.3.0"
+  revision = "a368813c5e648fee92e5f6c30e3944ff9d5e8895"
 
 [[projects]]
   name = "github.com/Masterminds/semver"
@@ -20,9 +26,15 @@
   version = "v2.14.1"
 
 [[projects]]
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "10f801ebc38b33738c9d17d50860f484a0988ff5"
+  name = "github.com/Microsoft/ApplicationInsights-Go"
+  packages = ["appinsights"]
+  revision = "98ac7ca026c26818888600ea0d966987aa56f043"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/abronan/valkeyrie"
+  packages = ["store"]
+  revision = "063d875e3c5fd734fa2aa12fac83829f62acfc70"
 
 [[projects]]
   name = "github.com/aokoli/goutils"
@@ -38,33 +50,64 @@
 
 [[projects]]
   name = "github.com/containous/flaeg"
+  packages = [
+    ".",
+    "parse"
+  ]
+  revision = "b4c2f060875361c070ed2bc300c5929b82f5fa2e"
+  version = "v1.1.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/containous/mux"
   packages = ["."]
-  revision = "4b6f66624dce34a226f080b414c4705ea8731bc5"
-  version = "v1.0.0"
+  revision = "06ccd3e75091eb659b1d720cda0e16bc7057954c"
 
 [[projects]]
   branch = "master"
   name = "github.com/containous/traefik"
-  packages = ["autogen/gentemplates","job","log","provider","provider/label","safe","tls","tls/generate","types"]
-  revision = "06d528a2bdc5398a4552f78d2304d9c390b7ccf6"
+  packages = [
+    "autogen/gentemplates",
+    "job",
+    "log",
+    "provider",
+    "provider/label",
+    "safe",
+    "tls",
+    "tls/generate",
+    "types"
+  ]
+  revision = "21b8b2deb552e01d163e12ba2e587786573e7962"
 
 [[projects]]
-  name = "github.com/docker/libkv"
-  packages = ["store"]
-  revision = "aabc039ad04deb721e234f99cd1b4aa28ac71a40"
-  version = "v0.2.1"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
+  name = "github.com/gorilla/context"
+  packages = ["."]
+  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/huandu/xstrings"
   packages = ["."]
-  revision = "37469d0c81a7910b49d64a0d308ded4823e90937"
+  revision = "2bf18b218c51864a87384c06996e40ff9dcff8e1"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "7fe0c75c13abdee74b09fcacef5ea1c6bba6a874"
-  version = "0.2.4"
+  revision = "163f41321a19dd09362d4c63cc2489db2015f1f4"
+  version = "0.3.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jjcollinge/logrus-appinsights"
+  packages = ["."]
+  revision = "9b66602d496a139e4722bdde32f0f1ac1c12d4a8"
 
 [[projects]]
   name = "github.com/jjcollinge/servicefabric"
@@ -78,38 +121,66 @@
   revision = "45c278ab3607870051a2ea9040bb85fcb8557481"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ryanuber/go-glob"
   packages = ["."]
-  revision = "572520ed46dbddaed19ea3d9541bdd0494163693"
-  version = "v0.1"
+  revision = "256dc444b735e061061cf46c809487313d5b0065"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
-  revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
-  version = "v1.1.0"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require"
+  ]
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["pbkdf2","scrypt"]
-  revision = "0fcca4842a8d74bfddc2c96a073bd2a4d2a7a2e8"
+  packages = [
+    "pbkdf2",
+    "scrypt",
+    "ssh/terminal"
+  ]
+  revision = "80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "28a7276518d399b9634904daad79e18b44d481bc"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "641605214e7dab930817f68e2fef560efbb033e5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "80f3928471a7e1bc924cb3ed1dada3b44ce2c5a29f4e024aeb6ef336f8d67b79"
+  inputs-digest = "d3c937e29161ad3f5234f6e2e5382a5e62c0360bd8715c9e92fc838082f91792"
   solver-name = "gps-cdcl"
   solver-version = 1
