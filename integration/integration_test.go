@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
+	// "strings"
 	"testing"
 	"time"
 
@@ -16,6 +18,13 @@ import (
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 )
+
+const numberOfNodeTestServices = 6
+const numberOfJavaTestServices = 1
+const numberOfJavaStatefulBackends = 1 //Currently don't have a frontend but backend is exposed
+
+var expectedNumberOfFrontends = numberOfJavaTestServices + numberOfNodeTestServices
+var expectedNumberOfBackends = numberOfNodeTestServices + numberOfJavaTestServices + numberOfJavaStatefulBackends
 
 var isVerbose bool
 var isClusterAlreadyRunning bool
@@ -65,11 +74,11 @@ func TestServiceDiscovery(t *testing.T) {
 	select {
 	case actual := <-configurationChan:
 		t.Log("Configuration received", toJSON(actual))
-		if len(actual.Configuration.Frontends) != 6 {
-			t.Error("Expected to see 6 frontends enabled in the cluster")
+		if len(actual.Configuration.Frontends) != expectedNumberOfFrontends {
+			t.Errorf("Expected to see %v frontends enabled in the cluster", expectedNumberOfFrontends)
 		}
-		if len(actual.Configuration.Backends) != 6 {
-			t.Error("Expected to see 6 backends enabled in the cluster")
+		if len(actual.Configuration.Backends) != expectedNumberOfBackends {
+			t.Errorf("Expected to see %v backends enabled in the cluster", expectedNumberOfBackends)
 		}
 	case <-time.After(time.Second * 12):
 		log.Info("Timeout occurred")
@@ -128,11 +137,11 @@ func TestLabelOverrides(t *testing.T) {
 	select {
 	case actual := <-configurationChan:
 		t.Log("Configuration received", toJSON(actual))
-		if len(actual.Configuration.Frontends) != 5 {
-			t.Error("Expected to see 5 frontends enabled in the cluster")
+		if len(actual.Configuration.Frontends) != expectedNumberOfFrontends-1 {
+			t.Errorf("Expected to see %v frontends enabled in the cluster", expectedNumberOfFrontends-1)
 		}
-		if len(actual.Configuration.Backends) != 5 {
-			t.Error("Expected to see 5 backends enabled in the cluster")
+		if len(actual.Configuration.Backends) != expectedNumberOfBackends-1 {
+			t.Errorf("Expected to see %v backends enabled in the cluster", expectedNumberOfBackends-1)
 		}
 	case <-time.After(time.Second * 12):
 		log.Info("Timeout occurred")
@@ -162,13 +171,17 @@ func TestBackendUrlCorrect(t *testing.T) {
 		t.Log("Configuration received", toJSON(actual))
 
 		client := &http.Client{}
-		for _, backend := range actual.Configuration.Backends {
+		for backendName, backend := range actual.Configuration.Backends {
+			if strings.Contains(backendName, "fabric-testapp-java") {
+				t.Log("Skipping java stateful service as currently unsupported, waiting on plugin model see: https://github.com/containous/traefik/pull/3239")
+				continue
+			}
 			for serverName, server := range backend.Servers {
 				result, err := client.Get(server.URL)
 
 				if err != nil || result.StatusCode != 200 {
+					t.Logf("Server failed to return 200 at %v", server.URL)
 					t.Error(err)
-					t.FailNow()
 				}
 				resultString, _ := ioutil.ReadAll(result.Body)
 				t.Logf("Success server:%v responded with:%v", serverName, string(resultString))

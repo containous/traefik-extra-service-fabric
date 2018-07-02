@@ -10,7 +10,7 @@ echo "see https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-g
 
 echo "######## Remove previous containers if they exist ###########"
 docker rm -f sftestcluster 
-docker rm -f sfsampleinstaller 
+docker rm -f sfsampleinstaller
 docker rm -f sfappinstaller
 
 echo "######## Starting onebox cluster docker container ###########"

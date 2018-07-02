@@ -1,7 +1,0 @@
-{
-  "generator-azuresfjava": {
-    "projName": "testapp_java",
-    "frameworkType": "Reliable Stateful Service",
-    "author": "<your name>"
-  }
-}
