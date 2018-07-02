@@ -22,6 +22,7 @@ This option can be used to test the full end-2-end with the traefik binary runni
 2. Copy the build traefik binary to `./traefik/TraefikPkg/Code`. For an example script see `./scripts/download_traefik.sh`
 3. From the root dir run `docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/upload_traefik.sh`
 4. Check the output by hitting `localhost:8080`
+5. To test another binary run `docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/remove_apps.sh` then rerun `docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/upload_traefik.sh` and `docker run --name sfappinstaller -d --network=host -v ${PWD}/../:/src $DOCKERLOCATION/sfctl -f ./scripts/upload_test_apps.sh` as needed. 
 
 ## All Flags
 

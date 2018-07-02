@@ -14,7 +14,7 @@ docker rm -f sfsampleinstaller
 docker rm -f sfappinstaller
 
 echo "######## Starting onebox cluster docker container ###########"
-docker run --name sftestcluster -d -p 19080:19080 -p 19000:19000 -p 25100-25200:25100-25200 $DOCKERLOCATION/sfoneboxwithnode 
+docker run --name sftestcluster -d -p 19080:19080 -p 19000:19000 -p 25100-25200:25100-25200 -p 8080:8080 -p 8081:8081 $DOCKERLOCATION/sfoneboxwithnode 
 
 bash -f ./wait_for_healthy.sh
 
