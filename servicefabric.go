@@ -41,9 +41,15 @@ type Provider struct {
 	AppInsightsInterval   flaeg.Duration   `description:"The interval for sending data to Application Insights, optional"`
 }
 
+// Init the provider
+func (p *Provider) Init(constraints types.Constraints) error {
+	p.BaseProvider.Init(constraints)
+	return nil
+}
+
 // Provide allows the ServiceFabric provider to provide configurations to traefik
 // using the given configuration channel.
-func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *safe.Pool, constraints types.Constraints) error {
+func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *safe.Pool) error {
 	if p.APIVersion == "" {
 		p.APIVersion = sf.DefaultAPIVersion
 	}
