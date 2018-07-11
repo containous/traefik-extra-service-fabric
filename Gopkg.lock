@@ -77,7 +77,7 @@
     "tls/generate",
     "types"
   ]
-  revision = "21b8b2deb552e01d163e12ba2e587786573e7962"
+  revision = "031451abab2a5044d6f5b7d0f2c81cb7a605fe3c"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -116,9 +116,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mitchellh/hashstructure"
+  packages = ["."]
+  revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
+
+[[projects]]
+  branch = "master"
   name = "github.com/ogier/pflag"
   packages = ["."]
   revision = "45c278ab3607870051a2ea9040bb85fcb8557481"
+
+[[projects]]
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
