@@ -8,10 +8,6 @@ ignored = ["github.com/containous/traefik/autogen/genstatic"]
   branch = "master"
   name = "github.com/cenk/backoff"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/containous/traefik"
-
 [[override]]
   branch = "master"
   name = "github.com/containous/traefik"
