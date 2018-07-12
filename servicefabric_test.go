@@ -116,13 +116,15 @@ func TestUpdateConfig(t *testing.T) {
 		expectedPropertyName:   services.Items[0].ID,
 	}
 
-	provider := Provider{}
+	provider := Provider{
+		sfClient: client,
+	}
 	configurationChan := make(chan types.ConfigMessage)
 	ctx := context.Background()
 	pool := safe.NewPool(ctx)
 	defer pool.Stop()
 
-	err := provider.updateConfig(configurationChan, pool, client, time.Millisecond*100)
+	err := provider.updateConfig(configurationChan, pool, time.Millisecond*100)
 	require.NoError(t, err)
 
 	timeout := make(chan string, 1)
