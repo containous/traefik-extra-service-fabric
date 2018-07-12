@@ -39,7 +39,7 @@ type Provider struct {
 	AppInsightsKey        string           `description:"Application Insights Instrumentation Key"`
 	AppInsightsBatchSize  int              `description:"Number of trace lines per batch, optional"`
 	AppInsightsInterval   flaeg.Duration   `description:"The interval for sending data to Application Insights, optional"`
-	sfClient              *sf.Client
+	sfClient              sfClient
 }
 
 // Init the provider
