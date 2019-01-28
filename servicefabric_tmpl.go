@@ -7,9 +7,16 @@ const tmpl = `
   {{range $service := $aggServices }}
   {{range $partition := $service.Partitions }}
   {{range $instance := $partition.Instances }}
-    [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
-      url = "{{ getDefaultEndpoint $instance }}"
-      weight = {{ getGroupedWeight $service }}
+    {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+    {{if $endpointName }}
+      [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
+        url = "{{ getNamedEndpoint $instance $endpointName }}"
+        weight = {{ getGroupedWeight $service }}
+    {{else}}
+      [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
+        url = "{{ getDefaultEndpoint $instance }}"
+        weight = {{ getGroupedWeight $service }}
+    {{end}}
   {{end}}
   {{end}}
   {{end}}
@@ -64,9 +71,16 @@ const tmpl = `
         {{end}}
 
         {{range $instance := $partition.Instances}}
-          [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
-            url = "{{ getDefaultEndpoint $instance }}"
-            weight = {{ getWeight $service }}
+          {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+          {{if $endpointName }}
+            [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
+              url = "{{ getNamedEndpoint $instance $endpointName }}"
+              weight = {{ getWeight $service }}
+          {{else}}
+            [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
+              url = "{{ getDefaultEndpoint $instance }}"
+              weight = {{ getWeight $service }}
+          {{end}}
         {{end}}
 
       {{else if isStateful $service}}
@@ -74,12 +88,19 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
             {{ $backendName := getBackendName $service $partition }}
-            [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
-              url = "{{ getDefaultEndpoint $replica }}"
-							weight = 1
+            {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+            {{if $endpointName }}
+              [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
+                url = "{{ getNamedEndpoint $replica $endpointName }}"
+                weight = 1
+            {{else}}
+              [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
+                url = "{{ getDefaultEndpoint $replica }}"
+                weight = 1
+            {{end}}
 
-            [backends."{{$backendName}}".LoadBalancer]
-              method = "drr"
+              [backends."{{$backendName}}".LoadBalancer]
+                method = "drr"
 
           {{end}}
         {{end}}
@@ -114,14 +135,14 @@ const tmpl = `
         passHostHeader = {{ getPassHostHeader $service }}
         passTLSCert = {{ getPassTLSCert $service }}
         priority = {{ getPriority $service }}
-  
+
         {{ $entryPoints := getEntryPoints $service }}
         {{if $entryPoints }}
         entryPoints = [{{range $entryPoints }}
           "{{.}}",
           {{end}}]
         {{end}}
-  
+
         {{ $basicAuth := getBasicAuth $service }}
         {{if $basicAuth }}
          basicAuth = [{{range $basicAuth }}
@@ -166,33 +187,33 @@ const tmpl = `
           PublicKey = "{{ $headers.PublicKey }}"
           ReferrerPolicy = "{{ $headers.ReferrerPolicy }}"
           IsDevelopment = {{ $headers.IsDevelopment }}
-  
+
           {{if $headers.AllowedHosts }}
           AllowedHosts = [{{range $headers.AllowedHosts }}
             "{{.}}",
             {{end}}]
           {{end}}
-  
+
           {{if $headers.HostsProxyHeaders }}
           HostsProxyHeaders = [{{range $headers.HostsProxyHeaders }}
             "{{.}}",
             {{end}}]
           {{end}}
-  
+
           {{if $headers.CustomRequestHeaders }}
           [frontends."frontend-{{ $frontendName }}".headers.customRequestHeaders]
             {{range $k, $v := $headers.CustomRequestHeaders }}
             {{$k}} = "{{$v}}"
             {{end}}
           {{end}}
-  
+
           {{if $headers.CustomResponseHeaders }}
           [frontends."frontend-{{ $frontendName }}".headers.customResponseHeaders]
             {{range $k, $v := $headers.CustomResponseHeaders }}
             {{$k}} = "{{$v}}"
             {{end}}
           {{end}}
-  
+
           {{if $headers.SSLProxyHeaders }}
           [frontends."frontend-{{ $frontendName }}".headers.SSLProxyHeaders]
             {{range $k, $v := $headers.SSLProxyHeaders }}
@@ -200,7 +221,7 @@ const tmpl = `
             {{end}}
           {{end}}
         {{end}}
-  
+
       {{range $key, $value := getFrontendRules $service }}
         [frontends."frontend-{{ $frontendName }}".routes."{{ $key }}"]
           rule = "{{ $value }}"
