@@ -7,7 +7,7 @@ const tmpl = `
   {{range $service := $aggServices }}
   {{range $partition := $service.Partitions }}
   {{range $instance := $partition.Instances }}
-    {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+    {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
     {{if $endpointName }}
       [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
         url = "{{ getNamedEndpoint $instance $endpointName }}"
@@ -71,7 +71,7 @@ const tmpl = `
         {{end}}
 
         {{range $instance := $partition.Instances}}
-          {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+          {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
           {{if $endpointName }}
             [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
               url = "{{ getNamedEndpoint $instance $endpointName }}"
@@ -88,7 +88,7 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
             {{ $backendName := getBackendName $service $partition }}
-            {{ $endpointName := getLabelValue $service "traefik.portName" "" }}
+            {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
             {{if $endpointName }}
               [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
                 url = "{{ getNamedEndpoint $replica $endpointName }}"
