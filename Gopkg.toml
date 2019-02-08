@@ -5,8 +5,8 @@ ignored = ["github.com/containous/traefik/autogen/genstatic"]
   revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/cenk/backoff"
+  version = "2.1.1"
 
 [[override]]
   branch = "master"

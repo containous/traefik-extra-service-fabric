@@ -317,17 +317,11 @@ func TestGetReplicaDefaultEndpoint(t *testing.T) {
 
 			defaultEndpoint, err := getReplicaDefaultEndpoint(test.replicaData)
 			if test.errorExpected {
-				if err == nil {
-					t.Fatal("Expected an error, got no error")
-				}
+				require.Error(t, err)
 			} else {
-				if err != nil {
-					t.Fatalf("Expected no error, got %v", err)
-				}
+				require.NoError(t, err)
 
-				if defaultEndpoint != test.expectedEndpoint {
-					t.Errorf("Got %s, want %s", defaultEndpoint, test.expectedEndpoint)
-				}
+				assert.Equal(t, test.expectedEndpoint, defaultEndpoint)
 			}
 		})
 	}
@@ -363,17 +357,11 @@ func TestGetReplicaNamedEndpoint(t *testing.T) {
 
 			namedEndpoint, err := getReplicaNamedEndpoint(test.replicaData, "DefaultEndpoint")
 			if test.errorExpected {
-				if err == nil {
-					t.Fatal("Expected an error, got no error")
-				}
+				require.Error(t, err)
 			} else {
-				if err != nil {
-					t.Fatalf("Expected no error, got %v", err)
-				}
+				require.NoError(t, err)
 
-				if namedEndpoint != test.expectedEndpoint {
-					t.Errorf("Got %s, want %s", namedEndpoint, test.expectedEndpoint)
-				}
+				assert.Equal(t, test.expectedEndpoint, namedEndpoint)
 			}
 		})
 	}

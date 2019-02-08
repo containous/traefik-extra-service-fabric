@@ -43,10 +43,10 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
   name = "github.com/cenk/backoff"
   packages = ["."]
-  revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
+  revision = "1e4cf3da559842a91afcb6ea6141451e6c30c618"
+  version = "v2.1.1"
 
 [[projects]]
   name = "github.com/containous/flaeg"
@@ -177,12 +177,6 @@
 
 [[projects]]
   branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -193,6 +187,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d3c937e29161ad3f5234f6e2e5382a5e62c0360bd8715c9e92fc838082f91792"
+  inputs-digest = "21050e24d17adf7b8192064a8221bce56c560bcf9a40bf3c3887f744e27f2045"
   solver-name = "gps-cdcl"
   solver-version = 1
