@@ -333,6 +333,52 @@ func TestGetReplicaDefaultEndpoint(t *testing.T) {
 	}
 }
 
+func TestGetReplicaNamedEndpoint(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		replicaData      *sf.ReplicaItemBase
+		expectedEndpoint string
+		errorExpected    bool
+	}{
+		{
+			desc: "valid named endpoint",
+			replicaData: &sf.ReplicaItemBase{
+				Address: `{"Endpoints":{"OtherEndpoint":"http://localhost:8081","DefaultEndpoint":"http://localhost:8082"}}`,
+			},
+			expectedEndpoint: "http://localhost:8082",
+		},
+		{
+			desc: "invalid named endpoint",
+			replicaData: &sf.ReplicaItemBase{
+				Address: `{"Endpoints":{"OtherEndpoint":"http://localhost:8081"}}`,
+			},
+			errorExpected: true,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			namedEndpoint, err := getReplicaNamedEndpoint(test.replicaData, "DefaultEndpoint")
+			if test.errorExpected {
+				if err == nil {
+					t.Fatal("Expected an error, got no error")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Expected no error, got %v", err)
+				}
+
+				if namedEndpoint != test.expectedEndpoint {
+					t.Errorf("Got %s, want %s", namedEndpoint, test.expectedEndpoint)
+				}
+			}
+		})
+	}
+}
+
 func TestGetClusterServices(t *testing.T) {
 	client := &clientMock{
 		applications: apps,
