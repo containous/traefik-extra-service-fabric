@@ -1,6 +1,4 @@
-.PHONY: all
-
-GOFILES := $(shell go list -f '{{range $$index, $$element := .GoFiles}}{{$$.Dir}}/{{$$element}}{{"\n"}}{{end}}' ./... | grep -v '/vendor/')
+.PHONY: default test dependencies clean build checks
 
 default: clean checks test build
 
@@ -16,9 +14,5 @@ clean:
 build:
 	go build
 
-checks: check-fmt
-	gometalinter ./...
-
-check-fmt: SHELL := /bin/bash
-check-fmt:
-	diff -u <(echo -n) <(gofmt -d $(GOFILES))
+checks:
+	golangci-lint run

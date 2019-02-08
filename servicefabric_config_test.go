@@ -144,7 +144,7 @@ func TestBuildConfigurationStateful(t *testing.T) {
 		{
 			desc: "with label frontend.rule.partition.$partitionId",
 			labels: map[string]string{
-				label.TraefikEnable:                                                    "true",
+				label.TraefikEnable: "true",
 				"traefik.frontend.rule.partition.bce46a8c-b62d-4996-89dc-7ffc00a96902": "HeadersRegexp: username, ^b",
 			},
 			expected: &types.Configuration{
