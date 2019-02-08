@@ -7,16 +7,14 @@ const tmpl = `
   {{range $service := $aggServices }}
   {{range $partition := $service.Partitions }}
   {{range $instance := $partition.Instances }}
-    {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
-    {{if $endpointName }}
-      [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
+    [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
+      weight = {{ getGroupedWeight $service }}
+      {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
+      {{if $endpointName }}
         url = "{{ getNamedEndpoint $instance $endpointName }}"
-        weight = {{ getGroupedWeight $service }}
-    {{else}}
-      [backends."{{ $aggName }}".servers."{{ $service.ID }}-{{ $instance.ID }}"]
+      {{else}}
         url = "{{ getDefaultEndpoint $instance }}"
-        weight = {{ getGroupedWeight $service }}
-    {{end}}
+      {{end}}
   {{end}}
   {{end}}
   {{end}}
@@ -71,15 +69,13 @@ const tmpl = `
         {{end}}
 
         {{range $instance := $partition.Instances}}
-          {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
-          {{if $endpointName }}
-            [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
+          [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
+            weight = {{ getWeight $service }}
+            {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
+            {{if $endpointName }}
               url = "{{ getNamedEndpoint $instance $endpointName }}"
-              weight = {{ getWeight $service }}
-          {{else}}
-            [backends."{{ $service.Name }}".servers."{{ $instance.ID }}"]
+            {{else}}
               url = "{{ getDefaultEndpoint $instance }}"
-              weight = {{ getWeight $service }}
           {{end}}
         {{end}}
 
@@ -88,16 +84,14 @@ const tmpl = `
         {{range $replica := $partition.Replicas}}
           {{if isPrimary $replica}}
             {{ $backendName := getBackendName $service $partition }}
-            {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
-            {{if $endpointName }}
-              [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
+            [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
+              weight = 1
+              {{ $endpointName := getLabelValue $service "traefik.servicefabric.endpointname" "" }}
+              {{if $endpointName }}
                 url = "{{ getNamedEndpoint $replica $endpointName }}"
-                weight = 1
-            {{else}}
-              [backends."{{ $backendName }}".servers."{{ $replica.ID }}"]
+              {{else}}
                 url = "{{ getDefaultEndpoint $replica }}"
-                weight = 1
-            {{end}}
+              {{end}}
 
               [backends."{{$backendName}}".LoadBalancer]
                 method = "drr"
