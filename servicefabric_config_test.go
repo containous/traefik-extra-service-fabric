@@ -321,7 +321,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 					Backend:  "fabric:/TestApplication/TestService",
 					Query: 	  "/404.html",
 				}
-				assert.Equal(t, expected, b.HealthCheck)
+				assert.Equal(t, expected, b.ErrorPage)
 			},
 		},
 		{
