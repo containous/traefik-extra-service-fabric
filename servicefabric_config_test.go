@@ -630,7 +630,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 			},
 			validate: func(t *testing.T, b *types.Backend) {
 				expected := &types.ErrorPage{
-					Status:   ["401-404","503"],
+					Status:   []string{"401-404", "503"},
 					Backend:  "fabric:/TestApplication/TestService",
 					Query: 	  "/404.html",
 				}
