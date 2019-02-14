@@ -48,7 +48,7 @@ func (p *Provider) buildConfiguration(services []ServiceItemExtended) (*types.Co
 		"getWhiteList":      getWhiteList,
 		"getHeaders":        getHeaders,
 		"getRedirect":       getRedirect,
-		"getErrorPages":	 getErrorPages,
+		"getErrorPages":     getErrorPages,
 
 		// SF Service Grouping
 		"getGroupedServices": getFuncServicesGroupedByLabel(traefikSFGroupName),
