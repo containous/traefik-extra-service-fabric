@@ -315,7 +315,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageBackend: "fabric:/TestApplication/TestService",
 				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageQuery:   "/404.html",
 			},
-			validate: func(t *testing.T, b *types.Backend) {
+			validate: func(t *testing.T, b *types.Frontend) {
 				expected := &types.ErrorPage{
 					Status:   []string{"401-404", "503"},
 					Backend:  "fabric:/TestApplication/TestService",
@@ -636,7 +636,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				}
 				assert.Equal(t, expected, b.HealthCheck)
 			},
-		},		
+		},
 		{
 			desc: "Has circuit breaker set",
 			labels: map[string]string{
