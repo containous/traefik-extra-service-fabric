@@ -316,10 +316,12 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageQuery:   "/404.html",
 			},
 			validate: func(t *testing.T, b *types.Frontend) {
-				expected := &types.ErrorPage{
-					Status:  []string{"401-404", "503"},
-					Backend: "fabric:/TestApplication/TestService",
-					Query:   "/404.html",
+				expected := map[string]*types.ErrorPage{
+					"foo": {
+						Status:  []string{"401-404", "503"},
+						Backend: "fabric:/TestApplication/TestService",
+						Query:   "/404.html",
+					},
 				}
 				assert.Equal(t, expected, b.Errors)
 			},
