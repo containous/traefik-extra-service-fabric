@@ -34,7 +34,8 @@
 [issues]
   exclude-use-default = false
   max-per-linter = 0
-  max-same = 0
-  exclude = [
-    "`(apps|services|partitions|instances|labels)` is a global variable", # servicefabric_test.go
-  ]
+  max-same-issues = 0
+  exclude = []
+  [[issues.exclude-rules]]
+    path = "servicefabric_test.go"
+    text = "`(apps|services|partitions|instances|labels)` is a global variable"
