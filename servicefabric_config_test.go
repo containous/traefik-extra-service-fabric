@@ -308,6 +308,25 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 			},
 		},
 		{
+			desc: "Has error pages set",
+			labels: map[string]string{
+				label.TraefikEnable: "true",
+				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageStatus:  "401-404,503",
+				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageBackend: "fabric:/TestApplication/TestService",
+				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageQuery:   "/404.html",
+			},
+			validate: func(t *testing.T, b *types.Frontend) {
+				expected := map[string]*types.ErrorPage{
+					"foo": {
+						Status:  []string{"401-404", "503"},
+						Backend: "fabric:/TestApplication/TestService",
+						Query:   "/404.html",
+					},
+				}
+				assert.Equal(t, expected, b.Errors)
+			},
+		},
+		{
 			desc: "Has basicAuth set",
 			labels: map[string]string{
 				label.TraefikEnable:            "true",

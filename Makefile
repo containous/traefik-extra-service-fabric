@@ -1,5 +1,7 @@
 .PHONY: default test dependencies clean build checks
 
+GOFILES = $(shell git ls-files '*.go' | grep -v '^vendor/')
+
 default: clean checks test build
 
 test: clean
@@ -16,3 +18,6 @@ build:
 
 checks:
 	golangci-lint run
+
+fmt:
+	gofmt -s -l -w $(GOFILES)
