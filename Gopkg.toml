@@ -4,12 +4,12 @@ ignored = ["github.com/containous/traefik/autogen/genstatic"]
   name = "github.com/jjcollinge/servicefabric"
   revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
 
-[[constraint]]
+[[override]]
   name = "github.com/cenk/backoff"
   version = "2.1.1"
 
 [[override]]
-  branch = "master"
+  branch = "v1.7"
   name = "github.com/containous/traefik"
 
 # Gopkg.toml example
