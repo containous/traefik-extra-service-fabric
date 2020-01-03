@@ -29,6 +29,10 @@
     "dupl",
     "prealloc",
     "scopelint",
+    "stylecheck",
+    "wsl",
+    "godox",
+    "gomnd",
   ]
 
 [issues]
@@ -39,3 +43,6 @@
   [[issues.exclude-rules]]
     path = "servicefabric_test.go"
     text = "`(apps|services|partitions|instances|labels)` is a global variable"
+ [[issues.exclude-rules]]
+    path = "(.+)_test.go"
+    linters = ["goconst", "funlen"]
