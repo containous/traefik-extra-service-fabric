@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/containous/traefik/provider/label"
-	"github.com/containous/traefik/types"
 	sf "github.com/jjcollinge/servicefabric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/traefik/provider/label"
+	"github.com/traefik/traefik/types"
 )
 
 // TestServicesPresentInConfig tests that the basic services provide by SF

@@ -1,4 +1,4 @@
-ignored = ["github.com/containous/traefik/autogen/genstatic"]
+ignored = ["github.com/traefik/traefik/autogen/genstatic"]
 
 [[constraint]]
   name = "github.com/jjcollinge/servicefabric"
@@ -10,7 +10,7 @@ ignored = ["github.com/containous/traefik/autogen/genstatic"]
 
 [[override]]
   branch = "v1.7"
-  name = "github.com/containous/traefik"
+  name = "github.com/traefik/traefik"
 
 # Gopkg.toml example
 #

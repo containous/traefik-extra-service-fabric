@@ -86,7 +86,7 @@
 [[projects]]
   branch = "v1.7"
   digest = "1:be5fd3ee68c26b86b3b469ec695d31ee4d908cf207e787ebbdd3e98c118b25fe"
-  name = "github.com/containous/traefik"
+  name = "github.com/traefik/traefik"
   packages = [
     "autogen/gentemplates",
     "job",
@@ -252,12 +252,12 @@
   input-imports = [
     "github.com/cenk/backoff",
     "github.com/containous/flaeg",
-    "github.com/containous/traefik/job",
-    "github.com/containous/traefik/log",
-    "github.com/containous/traefik/provider",
-    "github.com/containous/traefik/provider/label",
-    "github.com/containous/traefik/safe",
-    "github.com/containous/traefik/types",
+    "github.com/traefik/traefik/job",
+    "github.com/traefik/traefik/log",
+    "github.com/traefik/traefik/provider",
+    "github.com/traefik/traefik/provider/label",
+    "github.com/traefik/traefik/safe",
+    "github.com/traefik/traefik/types",
     "github.com/jjcollinge/logrus-appinsights",
     "github.com/jjcollinge/servicefabric",
     "github.com/stretchr/testify/assert",
