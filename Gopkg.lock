@@ -84,24 +84,6 @@
   revision = "c33f32e268983f989290677351b871b65da75ba5"
 
 [[projects]]
-  branch = "v1.7"
-  digest = "1:be5fd3ee68c26b86b3b469ec695d31ee4d908cf207e787ebbdd3e98c118b25fe"
-  name = "github.com/traefik/traefik"
-  packages = [
-    "autogen/gentemplates",
-    "job",
-    "log",
-    "provider",
-    "provider/label",
-    "safe",
-    "tls",
-    "tls/generate",
-    "types",
-  ]
-  pruneopts = ""
-  revision = "57ae9a80d5ccba29c8f566a8be4c27512727d9ac"
-
-[[projects]]
   digest = "1:0deddd908b6b4b768cfc272c16ee61e7088a60f7fe2f06c547bd3d8e1f8b8e77"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -224,6 +206,24 @@
   version = "v1.3.0"
 
 [[projects]]
+  branch = "v1.7"
+  digest = "1:5b9631e9bc1f6f659052c48a183ae9e17905e65b0846a977a344635b16dcc861"
+  name = "github.com/traefik/traefik"
+  packages = [
+    "autogen/gentemplates",
+    "job",
+    "log",
+    "provider",
+    "provider/label",
+    "safe",
+    "tls",
+    "tls/generate",
+    "types",
+  ]
+  pruneopts = ""
+  revision = "d1befe7b122c6f5e95d730936c0993ca456fd071"
+
+[[projects]]
   branch = "master"
   digest = "1:36ef1d8645934b1744cc7d8726e00d3dd9d8d84c18617bf7367a3a6d532f3370"
   name = "golang.org/x/crypto"
@@ -252,16 +252,16 @@
   input-imports = [
     "github.com/cenk/backoff",
     "github.com/containous/flaeg",
+    "github.com/jjcollinge/logrus-appinsights",
+    "github.com/jjcollinge/servicefabric",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "github.com/traefik/traefik/job",
     "github.com/traefik/traefik/log",
     "github.com/traefik/traefik/provider",
     "github.com/traefik/traefik/provider/label",
     "github.com/traefik/traefik/safe",
     "github.com/traefik/traefik/types",
-    "github.com/jjcollinge/logrus-appinsights",
-    "github.com/jjcollinge/servicefabric",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

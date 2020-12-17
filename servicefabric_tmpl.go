@@ -43,7 +43,10 @@ const tmpl = `
             {{if $loadBalancer.Stickiness }}
             [backends."{{ $backendName }}".loadBalancer.stickiness]
               cookieName = "{{ $loadBalancer.Stickiness.CookieName }}"
-            {{end}}
+              secure = {{ $loadBalancer.Stickiness.Secure }}
+              httpOnly = {{ $loadBalancer.Stickiness.HTTPOnly }}
+              sameSite = "{{ $loadBalancer.Stickiness.SameSite }}"
+			{{end}}
         {{end}}
 
         {{ $maxConn := getMaxConn $service }}
