@@ -46,7 +46,7 @@ const tmpl = `
               secure = {{ $loadBalancer.Stickiness.Secure }}
               httpOnly = {{ $loadBalancer.Stickiness.HTTPOnly }}
               sameSite = "{{ $loadBalancer.Stickiness.SameSite }}"
-			{{end}}
+            {{end}}
         {{end}}
 
         {{ $maxConn := getMaxConn $service }}
