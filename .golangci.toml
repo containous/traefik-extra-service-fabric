@@ -29,17 +29,27 @@
     "dupl",
     "prealloc",
     "scopelint",
-    "stylecheck",
     "wsl",
+    "nlreturn",
     "godox",
     "gomnd",
+    "gomodguard",
+    "gochecknoglobals",
+    "goerr113",
+    "wrapcheck",
+    "testpackage",
+    "paralleltest",
+    "tparallel",
+    "exhaustivestruct",
   ]
 
 [issues]
   exclude-use-default = false
   max-per-linter = 0
   max-same-issues = 0
-  exclude = []
+  exclude = [
+    "ST1000: at least one file in a package should have a package comment",
+  ]
   [[issues.exclude-rules]]
     path = "servicefabric_test.go"
     text = "`(apps|services|partitions|instances|labels)` is a global variable"

@@ -49,7 +49,7 @@ func (c *clientMock) GetServiceLabels(service *sf.ServiceItem, app *sf.Applicati
 	return c.getServicelabelsResult, nil
 }
 
-// Note this is dumb mock the `exists`
+// Note this is dumb mock the `exists`.
 func (c *clientMock) GetProperties(name string) (bool, map[string]string, error) {
 	if c.expectedPropertyName == name {
 		return true, c.getPropertiesResult, nil

@@ -12,7 +12,7 @@ import (
 )
 
 // TestServicesPresentInConfig tests that the basic services provide by SF
-// are return in the configuration object
+// are return in the configuration object.
 func TestBuildConfigurationServicesPresentInConfig(t *testing.T) {
 	provider := Provider{}
 
@@ -242,7 +242,6 @@ func TestBuildConfigurationStateful(t *testing.T) {
 	}
 }
 
-// nolint: gocyclo
 func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
@@ -597,7 +596,6 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 	}
 }
 
-// nolint: gocyclo
 func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 	testCases := []struct {
 		desc     string
