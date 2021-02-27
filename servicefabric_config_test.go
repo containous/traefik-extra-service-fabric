@@ -255,6 +255,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendPassHostHeader: "true",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.True(t, f.PassHostHeader)
 			},
 		},
@@ -265,6 +266,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendPassHostHeader: "false",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.False(t, f.PassHostHeader)
 			},
 		},
@@ -275,6 +277,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendWhitelistSourceRange: "10.0.0.1, 10.0.0.2",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				expected := &types.WhiteList{
 					SourceRange: []string{"10.0.0.1", "10.0.0.2"},
 				}
@@ -289,6 +292,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendWhiteListUseXForwardedFor: "true",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				expected := &types.WhiteList{
 					SourceRange:      []string{"10.0.0.1", "10.0.0.2"},
 					UseXForwardedFor: true,
@@ -303,6 +307,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendPriority: "13",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.Equal(t, f.Priority, 13)
 			},
 		},
@@ -315,6 +320,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.Prefix + label.BaseFrontendErrorPage + "foo." + label.SuffixErrorPageQuery:   "/404.html",
 			},
 			validate: func(t *testing.T, b *types.Frontend) {
+				t.Helper()
 				expected := map[string]*types.ErrorPage{
 					"foo": {
 						Status:  []string{"401-404", "503"},
@@ -332,6 +338,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendAuthBasic: "USER1:HASH1, USER1:HASH1",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.Len(t, f.BasicAuth, 2)
 
 				expected := []string{"USER1:HASH1", "USER1:HASH1"}
@@ -345,6 +352,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendEntryPoints: "Barry, Bob",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.Len(t, f.EntryPoints, 2)
 
 				expected := []string{"Barry", "Bob"}
@@ -358,6 +366,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendPassTLSCert: "true",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.True(t, f.PassTLSCert)
 			},
 		},
@@ -368,6 +377,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendPassTLSCert: "false",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.False(t, f.PassTLSCert)
 			},
 		},
@@ -378,6 +388,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendRule + ".default": "Path: /",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				assert.Len(t, f.Routes, 1)
 
 				expected := map[string]types.Route{
@@ -411,6 +422,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendSSLProxyHeaders:         "X-Testing:testing||X-Testing2:testing2",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				expected := &types.Headers{
 					SSLProxyHeaders: map[string]string{
 						"X-Testing":  "testing",
@@ -444,6 +456,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendRequestHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				require.NotNil(t, f.Headers, "headers")
 
 				expected := map[string]string{
@@ -460,6 +473,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendResponseHeaders: "X-Testing:testing||X-Testing2:testing2",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				require.NotNil(t, f.Headers, "headers")
 
 				expected := map[string]string{
@@ -479,6 +493,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendRedirectReplacement: "nope",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				expected := &types.Redirect{
 					EntryPoint: "foo",
 					Permanent:  true,
@@ -495,6 +510,7 @@ func TestBuildConfigurationFrontendLabelConfig(t *testing.T) {
 				label.TraefikFrontendRedirectReplacement: "$1",
 			},
 			validate: func(t *testing.T, f *types.Frontend) {
+				t.Helper()
 				expected := &types.Redirect{
 					Regex:       "(.*)",
 					Replacement: "$1",
@@ -609,6 +625,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendLoadBalancerMethod: "drr",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
+				t.Helper()
 				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
 				assert.Equal(t, "drr", b.LoadBalancer.Method)
 			},
@@ -624,6 +641,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendHealthCheckHeaders:  "Foo:bar || Bar:foo",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
+				t.Helper()
 				expected := &types.HealthCheck{
 					Path:     "/hc",
 					Port:     9000,
@@ -644,6 +662,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendCircuitBreakerExpression: "NetworkErrorRatio() > 0.5",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
+				t.Helper()
 				expected := &types.CircuitBreaker{
 					Expression: "NetworkErrorRatio() > 0.5",
 				}
@@ -657,6 +676,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendLoadBalancerStickiness: "true",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
+				t.Helper()
 				require.NotNil(t, b.LoadBalancer, "LoadBalancer")
 				assert.NotNil(t, b.LoadBalancer.Stickiness, "Stickiness")
 			},
@@ -669,6 +689,7 @@ func TestBuildConfigurationBackendLabelConfig(t *testing.T) {
 				label.TraefikBackendMaxConnExtractorFunc: "request.header.TEST_HEADER",
 			},
 			validate: func(t *testing.T, b *types.Backend) {
+				t.Helper()
 				expected := &types.MaxConn{
 					Amount:        1337,
 					ExtractorFunc: "request.header.TEST_HEADER",

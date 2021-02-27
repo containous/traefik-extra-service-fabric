@@ -1,0 +1,57 @@
+run:
+  deadline: 5m
+  skip-files: []
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 12
+  maligned:
+    suggest-new: true
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+  godox:
+    keywords:
+      - FIXME
+
+linters:
+  enable-all: true
+  disable:
+    - interfacer # deprecated
+    - maligned # deprecated
+    - cyclop # duplicate of gocyclo
+    - lll
+    - gas
+    - dupl
+    - prealloc
+    - scopelint
+    - wsl
+    - nlreturn
+    - gomnd
+    - gomodguard
+    - gochecknoglobals
+    - goerr113
+    - wrapcheck
+    - testpackage
+    - paralleltest
+    - tparallel
+    - exhaustive
+    - exhaustivestruct
+
+issues:
+  exclude-use-default: false
+  max-per-linter: 0
+  max-same-issues: 0
+  exclude:
+    - 'ST1000: at least one file in a package should have a package comment'
+  exclude-rules:
+    - path: servicefabric_test.go
+      text: '`(apps|services|partitions|instances|labels)` is a global variable'
+    - path: (.+)_test.go
+      linters:
+        - goconst
+        - funlen

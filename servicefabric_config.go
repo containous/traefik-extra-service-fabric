@@ -25,10 +25,10 @@ func (p *Provider) buildConfiguration(services []ServiceItemExtended) (*types.Co
 		"isEnabled":                  getFuncBoolLabel(label.TraefikEnable, false),
 		"getBackendName":             getBackendName,
 		"getDefaultEndpoint":         getDefaultEndpoint,
-		"getNamedEndpoint":           getNamedEndpoint,           // FIXME unused
-		"getApplicationParameter":    getApplicationParameter,    // FIXME unused
-		"doesAppParamContain":        doesAppParamContain,        // FIXME unused
-		"filterServicesByLabelValue": filterServicesByLabelValue, // FIXME unused
+		"getNamedEndpoint":           getNamedEndpoint,           // TODO unused
+		"getApplicationParameter":    getApplicationParameter,    // TODO unused
+		"doesAppParamContain":        doesAppParamContain,        // TODO unused
+		"filterServicesByLabelValue": filterServicesByLabelValue, // TODO unused
 
 		// Backend functions
 		"getWeight":         getFuncServiceIntLabel(label.TraefikWeight, label.DefaultWeight),
