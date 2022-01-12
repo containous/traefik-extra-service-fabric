@@ -156,29 +156,32 @@ func getClusterServices(sfClient sfClient) ([]ServiceItemExtended, error) {
 				log.Error(err)
 			} else {
 				item.Labels = labels
-			}
 
-			if partitions, err := sfClient.GetPartitions(app.ID, service.ID); err != nil {
-				log.Error(err)
-			} else {
-				for _, partition := range partitions.Items {
-					partitionExt := PartitionItemExtended{PartitionItem: partition}
-
-					switch {
-					case isStateful(item):
-						partitionExt.Replicas = getValidReplicas(sfClient, app, service, partition)
-					case isStateless(item):
-						partitionExt.Instances = getValidInstances(sfClient, app, service, partition)
-					default:
-						log.Errorf("Unsupported service kind %s in service %s", partition.ServiceKind, service.Name)
-						continue
+				if _, ok := labels["traefik.enable"]; ok {
+					if partitions, err := sfClient.GetPartitions(app.ID, service.ID); err != nil {
+						log.Error(err)
+					} else {
+						for _, partition := range partitions.Items {
+							partitionExt := PartitionItemExtended{PartitionItem: partition}
+		
+							switch {
+							case isStateful(item):
+								partitionExt.Replicas = getValidReplicas(sfClient, app, service, partition)
+							case isStateless(item):
+								partitionExt.Instances = getValidInstances(sfClient, app, service, partition)
+							default:
+								log.Errorf("Unsupported service kind %s in service %s", partition.ServiceKind, service.Name)
+								continue
+							}
+							log.Info("in getClusterServices, added the following replicas: service %v, partition: %v, replica %v",service.ID, partition, partitionExt.Replicas)
+		
+							item.Partitions = append(item.Partitions, partitionExt)
+						}
 					}
-
-					item.Partitions = append(item.Partitions, partitionExt)
+		
+					results = append(results, item)
 				}
 			}
-
-			results = append(results, item)
 		}
 	}
 
